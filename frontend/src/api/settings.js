@@ -1,5 +1,7 @@
+const API_BASE = import.meta.env.VITE_API_URL;
+
 export async function getSettings(){
-    const res = await fetch("/api/settings", {
+    const res = await fetch(`${API_BASE}/api/settings`, {
         method: "GET",
         credentials: "include",
     });
@@ -11,7 +13,7 @@ export async function getSettings(){
 
 
 export async function patchSettings(payload){
-    const res = await fetch("/api/settings", {
+    const res = await fetch(`${API_BASE}/api/settings`, {
         method: "PATCH",
         headers: {"Content-Type": "application/json"},
         credentials: "include",
@@ -26,7 +28,7 @@ export async function uploadAvatar(file) {
     const form = new FormData();
     form.append("file", file);
 
-    const res = await fetch("/api/settings/upload-avatar", {
+    const res = await fetch(`${API_BASE}/api/settings/upload-avatar`, {
         method: "POST",
         credentials: "include",
         body: form,
