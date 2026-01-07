@@ -85,8 +85,6 @@ Smart Attendance is a modern, intelligent attendance management system designed 
 - **🎨 Theme Support**: Multiple theme options (Light, Dark, Soft) for better user experience
 - **📱 Responsive Design**: Seamlessly works across desktop, tablet, and mobile devices
 - **🔐 Clerk Authentication**: Modern authentication with email/password and social login (Google)
-- **👤 Profile Completion**: Role-based onboarding with student/teacher specific fields
-- **🛡️ Role-Based Access**: Automatic redirection to appropriate dashboards based on user role
 - **💾 Cloud Storage**: Profile pictures stored securely on Cloudinary
 - **🗄️ MongoDB Database**: Scalable and flexible data storage
 - **🚀 High Performance**: Built with FastAPI for lightning-fast API responses
@@ -337,7 +335,6 @@ VITE_API_URL=http://localhost:8000
    - Enable Email and Google OAuth providers
    - Copy your Publishable Key from the API Keys section
    - See `frontend/CLERK_SETUP.md` for detailed setup instructions
-   - **Note**: User roles are now collected during signup via the Complete Profile page, not through Clerk metadata
 
 2. **JWT_SECRET**: Generate a strong random secret:
    ```bash
@@ -362,22 +359,15 @@ VITE_API_URL=http://localhost:8000
 #### 1. Login/Register
 
 - Navigate to `http://localhost:5173`
-- Click **"Register"** to create a new account
-- Sign up with Clerk authentication:
+- Click **"Login"** or **"Register"**
+- Sign in with Clerk authentication:
   - Use email/password authentication
   - Or click "Continue with Google" for Google OAuth
-- After successful signup, you'll be directed to **Complete Your Profile**:
-  - Select your role (Teacher or Student)
-  - Enter your Branch/Department
-  - Fill in role-specific fields:
-    - **Teachers**: Designation, Assigned Classes/Subjects
-    - **Students**: Admission Year, Class/Semester, Roll Number
-- Submit the form to complete your registration
-- You'll be automatically redirected to your role-based dashboard
+- After sign-up, set your role in your Clerk profile metadata (see CLERK_SETUP.md)
 
 #### 2. Dashboard Overview
 
-After completing your profile, you'll see:
+After logging in, you'll see:
 - **Total Students**: Number of students across all subjects
 - **Today's Attendance**: Attendance marked today
 - **Average Attendance**: Overall attendance percentage
@@ -443,23 +433,15 @@ After completing your profile, you'll see:
 #### 1. Login/Register
 
 - Navigate to `http://localhost:5173`
-- Click **"Register"** to create a new account
-- Sign up with Clerk authentication:
+- Click **"Login"** or **"Register"**
+- Sign in with Clerk authentication:
   - Use email/password authentication
   - Or click "Continue with Google" for Google OAuth
-- After successful signup, you'll be directed to **Complete Your Profile**:
-  - Select **"Student"** as your role
-  - Enter your Branch/Department
-  - Fill in student-specific fields:
-    - Admission Year
-    - Class/Semester
-    - Roll Number/Registration ID
-- Submit the form to complete your registration
-- You'll be automatically redirected to your student dashboard
+- After sign-up, set your role in your Clerk profile metadata (see CLERK_SETUP.md)
 
 #### 2. Student Dashboard
 
-After completing your profile, view:
+After logging in, view:
 - **Overall Attendance**: Your attendance percentage
 - **Subject-wise Attendance**: Attendance in each subject
 - **Recent Classes**: Latest attendance records
