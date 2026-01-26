@@ -23,8 +23,10 @@ This guide is your practical roadmap to learn the codebase, understand the stack
 
 1. Create a GitHub account: [github.com](https://github.com)
 2. Install Git: [git-scm.com](https://git-scm.com)
-3. Node.js 18+ and npm 9+
-4. Configure Git (in terminal):
+3. For frontend development: Node.js 18+ and npm 9+
+4. For backend development: Python 3.10+ and pip
+5. For database: MongoDB 5.0+
+6. Configure Git (in terminal):
 
 ```bash
 git config --global user.name "Your Name"
@@ -35,42 +37,48 @@ git config --global user.email "your.email@example.com"
 
 ## ⚛️ Understanding This Project
 
-This repository contains the React frontend of the Smart Attendance System.
+This repository contains a full-stack Smart Attendance System with three main components:
 
-### What this frontend does?
+### Project Structure
+- **Frontend** - React-based web application for user interface
+- **Backend API** - FastAPI service handling authentication, user management, and business logic
+- **ML Service** - FastAPI service with facial recognition capabilities using MediaPipe and OpenCV
+
+### What this system does?
 - Teacher login & authentication UI
 - Dashboard with attendance analytics
-- Webcam-based attendance capture
-- Student list with attendance percentage
+- Webcam-based attendance capture using facial recognition
+- Student list with attendance percentage tracking
 - Multi-theme UI (Light / Dark / Soft)
+- Real-time attendance marking and reporting
 
-### Tech Stack You’ll Touch
+### Tech Stack You'll Touch
+
+**Frontend:**
 - React 19 + Vite → UI & routing
 - Tailwind CSS v4 → Styling
 - CSS Variables → Theme system
 - react-webcam → Camera access
-- Fetch API → Backend communication
+- Axios → Backend communication
+- Material-UI → UI components
+- Recharts → Data visualization
 
-If you know basic React + CSS, you’re good to go.
+**Backend API:**
+- FastAPI → High-performance web framework
+- MongoDB + Motor → Database & async driver
+- PyJWT + Authlib → Authentication
+- Cloudinary → Image storage
+- Passlib → Password hashing
 
+**ML Service:**
+- FastAPI → Web framework
+- MediaPipe → Face detection
+- OpenCV → Image processing
+- NumPy → Numerical operations
+- Pillow → Image handling
 
----
+If you know basic React + CSS for frontend, or Python for backend, you're good to go.
 
-## 🆘 FAQs & Help
-
-1. Can beginners contribute?
-- Absolutely. This repo is beginner-friendly.
-
-2. What if my PR gets changes requested?
-- That’s normal. Update it and push again.
-
-3. Backend not running?
-- Mock data or UI-only changes are fine.
-
-4. Where to ask questions?
-- Open an issue or ask in PR comments.
-
----
 
 ## 🏁 Final Tips
 

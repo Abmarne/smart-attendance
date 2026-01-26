@@ -1,12 +1,28 @@
 # 🔥 Pull Request Summary
-Explain what this PR does.  
+Explain what this PR does in 2-3 sentences.  
 What feature, fix, or improvement did you add?
 
 ---
 
 # 🔗 Linked Issue
 Write the issue number this PR is linked with.  
-(Example: **Closes #12** — this automatically links & closes the issue when PR is merged)
+Example: **Closes #12** — this automatically links & closes the issue when PR is merged
+
+Closes #
+
+---
+
+# 📦 Type of Change
+Check the relevant option(s):
+
+- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
+- [ ] ✨ New feature (non-breaking change which adds functionality)
+- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] 📝 Documentation update
+- [ ] 🎨 UI/UX improvement
+- [ ] ♻️ Code refactoring
+- [ ] ⚡ Performance improvement
+- [ ] 🧪 Test addition or update
 
 ---
 
@@ -34,21 +50,31 @@ Describe what should happen after the changes.
 
 ---
 
-# 📸 Screenshots / Proof (Optional)
-Add screenshots, videos, logs, or test results.
+# 📸 Screenshots / Proof
+**Required for UI changes, optional for others**
+
+### Before:
+[Add screenshot or "N/A"]
+
+### After:
+[Add screenshot or "N/A"]
 
 ---
 
 # ✔ Checklist Before Submitting
 
-- [ ] Code compiles without errors  
-- [ ] No breaking changes  
-- [ ] Follows project conventions  
-- [ ] Added/updated comments or documentation  
-- [ ] Tested on local machine  
-- [ ] All checks passing  
+- [ ] My code follows the project's code style and conventions
+- [ ] Code compiles/runs without errors  
+- [ ] I have tested my changes locally
+- [ ] No breaking changes introduced
+- [ ] I have updated relevant documentation (if needed)
+- [ ] I have added/updated tests (if applicable)
+- [ ] All existing tests are passing  
+- [ ] I have self-reviewed my code
+- [ ] I have commented my code where necessary
 
 ---
 
 # 📝 Additional Notes (Optional)
-Anything extra that the reviewer should know?
+Anything extra that the reviewer should know?  
+(Dependencies added, configuration changes, migration steps, etc.)

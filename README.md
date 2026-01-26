@@ -156,12 +156,12 @@ git clone https://github.com/nem-web/smart-attendance.git
 cd smart-attendance
 ```
 
-### Backend Setup
+### 2. Backend API Setup
 
-#### Step 1: Navigate to Backend Directory
+#### Step 1: Navigate to Backend API Directory
 
 ```bash
-cd backend
+cd server/backend-api
 ```
 
 #### Step 2: Create and Activate Virtual Environment
@@ -183,19 +183,6 @@ source .venv/bin/activate
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
-```
-
-**Note**: Installing `face-recognition` may take several minutes as it compiles dlib from source. Ensure you have CMake and build tools installed.
-
-**For Ubuntu/Debian:**
-```bash
-sudo apt-get update
-sudo apt-get install build-essential cmake
-```
-
-**For macOS:**
-```bash
-brew install cmake
 ```
 
 #### Step 4: Setup Environment Variables
@@ -223,23 +210,91 @@ brew services start mongodb-community
 mongod --dbpath /path/to/your/data/directory
 ```
 
-#### Step 6: Run the Backend Server
+#### Step 6: Run the Backend API Server
 
 ```bash
-# From the backend directory
+# From the backend-api directory
 python -m app.main
 
 # Or using uvicorn directly
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The backend server will start on `http://localhost:8000`
+The backend API server will start on `http://localhost:8000`
 
 You can access the interactive API documentation at:
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
-### Frontend Setup
+### 3. ML Service Setup
+
+#### Step 1: Navigate to ML Service Directory
+
+```bash
+cd server/ml-service
+```
+
+#### Step 2: Create and Activate Virtual Environment
+
+**On Windows:**
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+**On macOS/Linux:**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+#### Step 3: Install Dependencies
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**Note**: Installing `mediapipe` and `opencv-python-headless` may take several minutes. Ensure you have build tools installed if compilation is required.
+
+**For Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install build-essential cmake python3-dev
+```
+
+**For macOS:**
+```bash
+brew install cmake
+```
+
+#### Step 4: Setup Environment Variables
+
+Copy the example environment file and configure it:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` file with your configuration.
+
+#### Step 5: Run the ML Service Server
+
+```bash
+# From the ml-service directory
+python -m app.main
+
+# Or using uvicorn directly
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+```
+
+The ML service will start on `http://localhost:8001`
+
+You can access the interactive API documentation at:
+- Swagger UI: `http://localhost:8001/docs`
+- ReDoc: `http://localhost:8001/redoc`
+
+### 4. Frontend Setup
 
 Open a new terminal window:
 
@@ -277,9 +332,9 @@ npm run preview
 
 ### Environment Variables
 
-#### Backend (.env)
+#### Backend API (.env)
 
-Create a `.env` file in the `backend` directory with the following variables:
+Create a `.env` file in the `server/backend-api` directory with the following variables:
 
 ```env
 # MongoDB Configuration
@@ -317,6 +372,22 @@ TEACHER_EMAIL=teacher@gmail.com
 TEACHER_PASSWORD=teacher123
 STUDENT_EMAIL=student@gmail.com
 STUDENT_PASSWORD=student123
+```
+
+#### ML Service (.env)
+
+Create a `.env` file in the `server/ml-service` directory with the following variables:
+
+```env
+# Service Configuration
+ML_SERVICE_HOST=0.0.0.0
+ML_SERVICE_PORT=8001
+
+# Backend API URL (for communication)
+BACKEND_API_URL=http://localhost:8000
+
+# Model Configuration (if needed)
+# Add any ML model specific configurations here
 ```
 
 #### Important Notes:

@@ -10,9 +10,10 @@ Please follow the [Code of Conduct](https://github.com/nem-web/smart-attendance/
 ## 🧰 Prerequisites
 
 Before you begin, make sure you have the following installed:
-- [Node.js](https://nodejs.org/) (v18 or higher)
-- [Python](https://www.python.org/) (v3.8 or higher)
+- [Python](https://www.python.org/) (v3.10 or higher) - Required for backend-api and ml-service
+- [Node.js](https://nodejs.org/) (v18 or higher) - Required for frontend only
 - [Git](https://git-scm.com/)
+- [MongoDB](https://www.mongodb.com/try/download/community) (v5.0 or higher) - For data storage
 
 ---
 
@@ -35,7 +36,7 @@ Click the "Fork" button in the top-right of the repo
 
 ```bash
 git clone https://github.com/YOUR-USERNAME/smart-attendance.git
-cd smart-attendance/frontend
+cd smart-attendance
 ```
 
 4. **Local Development Setup**
@@ -50,17 +51,47 @@ npm run dev
 
 The frontend will be available at `http://localhost:5173`
 
-#### Backend Setup
+#### Backend API Setup
 
 ```bash
-cd backend
+cd server/backend-api
+
+# Create virtual environment (recommended)
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
-# Or install dependencies manually:
-# pip install fastapi uvicorn pillow pydantic
-python main.py
+
+# Create .env file and configure (see README.md for details)
+cp .env.example .env
+
+# Run the backend API
+python -m app.main
 ```
 
 The backend API will be available at `http://localhost:8000`
+
+#### ML Service Setup
+
+```bash
+cd server/ml-service
+
+# Create virtual environment (recommended)
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file and configure (see README.md for details)
+cp .env.example .env
+
+# Run the ML service
+python -m app.main
+```
+
+The ML service will be available at `http://localhost:8001`
 
 5. **Create a Branch**
 
@@ -76,13 +107,24 @@ git checkout -b fix-typo-homepage
 
 7. **Lint, Build, Commit**
 
+**For Frontend:**
 ```bash
+cd frontend
 npm run lint
 npm run build
 git add .
 git commit -m "Improve: dashboard card spacing"
 git push origin feature/improve-dashboard-ui
 ```
+
+**For Backend Services (Python):**
+```bash
+# Python linting is optional - follow existing code style
+git add .
+git commit -m "Fix: attendance API endpoint"
+git push origin feature/fix-attendance-api
+```
+
 If lint fails → fix it. No shortcuts.
 
 8. **Create a Pull Request**
