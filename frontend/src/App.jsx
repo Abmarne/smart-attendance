@@ -31,7 +31,7 @@ function RedirectToHome() {
   return <Navigate to={"/login"} />
 }
 
-const studentRoutes = [
+const hideNavbarRoutes = [
   "/student-dashboard",
   "/student-subjects",
   "/student-forecast",
@@ -44,13 +44,13 @@ export default function App() {
   const { theme, setTheme } = useTheme();
   const location = useLocation();
 
-  const hideNavbar = studentRoutes.includes(location.pathname);
-  
+  const hideNavbar = hideNavbarRoutes.includes(location.pathname);
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       {!hideNavbar && <Header theme={theme} setTheme={setTheme} />}
 
-      <div className="p-6">
+      <main>
         <Routes>
           <Route path="/" element={<RedirectToHome/>} />
           <Route path="/dashboard" element={<Dashboard/>} />
@@ -73,7 +73,7 @@ export default function App() {
 
           <Route path="/oauth-callback" element={<OAuthCallback />} />
         </Routes>
-      </div>
+      </main>
     </div>
   );
 }
