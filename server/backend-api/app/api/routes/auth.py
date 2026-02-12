@@ -146,8 +146,6 @@ async def register(payload: RegisterRequest, background_tasks: BackgroundTasks):
         "role": payload.role,
         "name": payload.name,
         "college_name": payload.college_name,
-        "token": token,
-        "token": "" # No token returned to enforce verification
     }
 
 
