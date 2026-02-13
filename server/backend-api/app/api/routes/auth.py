@@ -135,9 +135,6 @@ async def register(payload: RegisterRequest, background_tasks: BackgroundTasks):
         verify_link,
     )
 
-    token = create_jwt(
-        user_id=str(created_user_id), role=payload.role, email=payload.email
-    )
     logger.info(f"User registered successfully: {payload.email}")
 
     return {
@@ -197,15 +194,24 @@ async def verify_email(token: str = Query(...)):
         if expires_at and expires_at < datetime.now(UTC):
             raise HTTPException(status_code=400, detail="Verification link expired")
 
+    # await db.users.update_one(
+    #     {"_id": user["_id"]},
+    #     {
+    #         "$set": {"is_verified": True},
+    #         "$unset": {"verification_token": "", "verification_expiry": ""},  # nosec
+    #     },
+    # )
+
     await db.users.update_one(
         {"_id": user["_id"]},
         {
             "$set": {"is_verified": True},
-            "$unset": {"verification_token": "", "verification_expiry": ""},  # nosec
+            "$unset": {  # nosec B105 - MongoDB unset operator, not a password
+                "verification_token": 1,
+                "verification_expiry": 1,
+            },
         },
     )
-
-    return {"message": "Email verified successfully. You can now log in.."}
 
     FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip(
         "/"
@@ -267,7 +273,10 @@ async def google_callback(request: Request):
             {"_id": user["_id"]},
             {
                 "$set": {"is_verified": True},
-                "$unset": {"verification_token": "", "verification_expiry": ""},
+            "$unset": {  # nosec B105 - MongoDB unset operator, not a password
+                    "verification_token": 1,
+                    "verification_expiry": 1,
+                },
             },
         )
         logger.info(f"User auto-verified via Google Login: {email}")
