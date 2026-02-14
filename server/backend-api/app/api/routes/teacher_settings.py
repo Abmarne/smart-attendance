@@ -216,7 +216,7 @@ async def replace_settings(user_id_str: str, payload: dict) -> dict:
     the UI). Returns the fresh teacher+user profile.
     """
     user_id = validate_object_id(user_id_str)
-    now = datetime.now(UTC)
+    now = datetime.utcnow()
 
     teacher_updates = {}
 
@@ -358,7 +358,7 @@ async def verify_student(
 
     result = await db.subjects.update_one(
         {"_id": subj_id, "professor_ids": prof_id, "students.student_id": stud_id},
-        {"$set": {"students.$.verified": True, "updated_at": datetime.now(UTC)}},
+        {"$set": {"students.$.verified": True, "updated_at": datetime.utcnow()}},
     )
 
     if result.modified_count == 0:
