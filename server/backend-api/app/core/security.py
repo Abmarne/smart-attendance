@@ -12,7 +12,6 @@ security = HTTPBearer(auto_error=False)
 JWT_SECRET = settings.JWT_SECRET
 JWT_ALGORITHM = settings.JWT_ALGORITHM
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def decode_jwt_token(token: str):
@@ -58,17 +57,16 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    # bcrypt hard limit — must be enforced here
-    if len(password.encode("utf-8")) > 72:
-        raise ValueError("Password exceeds bcrypt 72-byte limit")
-
     return pwd_context.hash(password)
+    
+    # # bcrypt hard limit — must be enforced here
+    # if len(password.encode("utf-8")) > 72:
+    #     raise ValueError("Password exceeds bcrypt 72-byte limit")
+
+    # return pwd_context.hash(password)
 
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    try:
-        return pwd_context.verify(plain_password, hashed_password)
-    except Exception:
-        return False
+    return pwd_context.verify(plain_password, hashed_password)
 
