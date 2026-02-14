@@ -6,6 +6,7 @@ mongomock
 structlog>=23.0.0
 python-json-logger>=2.0.0
 sentry-sdk[fastapi]>=1.40.0
+uvicorn[standard]>=0.29.0
 
 prometheus-client>=0.19.0
 prometheus-fastapi-instrumentator>=6.1.0
