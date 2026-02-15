@@ -14,6 +14,8 @@ import {
   Loader2,
   AlertTriangle
 } from "lucide-react"; // Assuming you use lucide-react, or replace with your icons
+import { getTodaySchedule } from "../api/schedule";
+import { useTranslation } from "react-i18next";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -218,7 +220,7 @@ export default function Dashboard() {
             <div className="bg-[var(--bg-card)] text-[var(--text-body)] rounded-2xl p-6 shadow-sm border border-[var(--border-color)] flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-bold text-[var(--text-main)]">Good morning, {user?.name || "Teacher"}</h2>
+                  <h2 className="text-xl font-bold text-[var(--text-main)]">{t('dashboard.greeting', { name: user?.name || "Teacher" })}</h2>
                   <p className=" text-sm text-[var(--text-body)] opacity-80">
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} • {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   </p>
@@ -293,20 +295,20 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
               <Link to="/students" className="block">
                 <div className="bg-[var(--bg-secondary)] p-5 rounded-2xl cursor-pointer hover:bg-[var(--bg-hover)] transition">
-                  <div className="font-semibold text-[var(--text-main)] mb-1">View student list</div>
-                  <div className="text-xs text-[var(--text-body)]">Search, filter and manage profiles</div>
+                  <div className="font-semibold text-[var(--text-main)] mb-1">{t('dashboard.quick_actions.view_students')}</div>
+                  <div className="text-xs text-[var(--text-body)]">{t('dashboard.quick_actions.view_students_desc')}</div>
                 </div>
               </Link>
               <Link to="/attendance" className="block">
                 <div className="bg-[var(--bg-secondary)] p-5 rounded-2xl cursor-pointer hover:bg-[var(--bg-hover)] transition">
-                  <div className="font-semibold text-[var(--text-main)] mb-1">Go to attendance</div>
-                  <div className="text-xs text-[var(--text-body)]">Open live marking screen</div>
+                  <div className="font-semibold text-[var(--text-main)] mb-1">{t('dashboard.quick_actions.go_to_attendance')}</div>
+                  <div className="text-xs text-[var(--text-body)]">{t('dashboard.quick_actions.go_to_attendance_desc')}</div>
                 </div>
               </Link>
               <Link to="/" className="block">
                 <div className="bg-[var(--bg-secondary)] p-5 rounded-2xl cursor-pointer hover:bg-[var(--bg-hover)] transition">
-                  <div className="font-semibold text-[var(--text-main)] mb-1">Manage schedule</div>
-                  <div className="text-xs text-[var(--text-body)]">Edit classes and timetables</div>
+                  <div className="font-semibold text-[var(--text-main)] mb-1">{t('dashboard.quick_actions.manage_schedule')}</div>
+                  <div className="text-xs text-[var(--text-body)]">{t('dashboard.quick_actions.manage_schedule_desc')}</div>
                 </div>
               </Link>
             </div>
