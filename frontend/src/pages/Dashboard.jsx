@@ -205,7 +205,7 @@ export default function Dashboard() {
             </button>
             <Link to="/start-attendance" className="hover:bg-[var(--primary-hover)] px-4 py-2 bg-[var(--primary)] text-[var(--text-on-primary)] rounded-lg hover:bg-[var(--primary-hover)] font-medium shadow-sm flex items-center gap-2 transition-colors">
               <Play size={18} fill="currentColor" />
-              {t('dashboard.start_attendance')}
+              {t('dashboard.startAttendance')}
             </Link>
           </div>
         </div>
