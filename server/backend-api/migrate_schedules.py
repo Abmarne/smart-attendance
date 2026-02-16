@@ -20,7 +20,7 @@ async def migrate():
             f"Schedules collection already has {count} documents. "
             "Skipping migration (or clear it manually first)."
         )
-        # return # Uncomment to prevent double migration, for now I'll just print
+        return  # Prevent double migration when schedules collection is not empty
 
     print("Fetching teachers...")
     teachers = db.teachers.find({})
