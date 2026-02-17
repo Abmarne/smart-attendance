@@ -88,7 +88,7 @@ export default function StudentList() {
   const getColorClasses = (color) => {
     switch (color) {
       case "green": return "bg-[var(--success)] text-[var(--text-on-primary)]";
-      case "amber": return "bg-[var(--warning)] text-[var(--text-main)]";
+      case "amber": return "bg-[var(--warning)] text-[var(--text-on-primary)]";
       case "red": return "bg-[var(--danger)] text-[var(--text-on-primary)]";
       default: return "bg-[var(--text-body)] text-[var(--text-on-primary)]";
     }
