@@ -559,7 +559,7 @@ export default function ManageSchedule() {
                       · {cls.teacher}
                     </p>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${cls.status === "Active" ? "bg-[var(--success)] text-[var(--text-on-primary)]" : "bg-[var(--warning)] text-[var(--text-main)]"}`}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${cls.status === "Active" ? "bg-[var(--success)] text-[var(--text-on-primary)]" : "bg-[var(--warning)] text-[var(--text-on-primary)]"}`}
                     >
                       {cls.status}
                     </span>
