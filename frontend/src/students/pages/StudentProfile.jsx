@@ -18,13 +18,14 @@ import {
 } from "lucide-react";
 import StudentNavigation from "../components/StudentNavigation"
 import ProfileSkeleton from "../components/ProfileSkeleton";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { uploadFaceImage } from "../../api/students"
 import { useTranslation } from "react-i18next";
 import SubjectAttendanceCard from "../../components/SubjectAttendanceCard";
 
 export default function StudentProfile() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const changeLanguage = (lng) => {
@@ -138,7 +139,7 @@ export default function StudentProfile() {
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-4">
-              <button className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors text-[var(--text-body)] cursor-pointer">
+              <button onClick={() => navigate(-1)} className="p-2 hover:bg-[var(--bg-secondary)] rounded-full transition-colors text-[var(--text-body)] cursor-pointer">
                 <ArrowLeft size={20} />
               </button>
               <div>
@@ -188,7 +189,7 @@ export default function StudentProfile() {
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[var(--text-body)]/80">{t('profile.branch')}:</span>
-                      <span className="font-medium text-[var(--text-main)]">{(data.branch).toUpperCase()}</span>
+                      <span className="font-medium text-[var(--text-main)]">{(data.branch || "N/A").toUpperCase()}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[var(--text-body)]/80">{t('profile.email')}:</span>
@@ -260,7 +261,7 @@ export default function StudentProfile() {
               <div className="space-y-2">
                 <div className="flex justify-between items-end text-sm mb-1">
                   <span className="text-[var(--text-body)]/80 font-medium">{t('profile.summary.overall')}</span>
-                  <span className="font-bold text-[var(--text-main)] text-lg">{data.attendance.percentage}</span>
+                  <span className="font-bold text-[var(--text-main)] text-lg">{data?.attendance?.percentage ?? "0%"}</span>
                 </div>
                 <div className="h-3 w-full bg-[var(--bg-secondary)] rounded-full overflow-hidden">
                   <div
@@ -274,22 +275,22 @@ export default function StudentProfile() {
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div>
                   <p className="text-xs text-[var(--text-body)]/80 uppercase font-bold tracking-wide">{t('profile.summary.attended')}</p>
-                  <p className="text-xl font-bold text-[var(--text-main)] mt-1">{data.attendance.present}</p>
+                  <p className="text-xl font-bold text-[var(--text-main)] mt-1">{data?.attendance?.present ?? 0}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[var(--text-body)]/80 uppercase font-bold tracking-wide">{t('profile.summary.total')}</p>
-                  <p className="text-xl font-bold text-[var(--text-main)] mt-1">{data.attendance.present + data.attendance.absent}</p>
+                  <p className="text-xl font-bold text-[var(--text-main)] mt-1">{(data?.attendance?.present ?? 0) + (data?.attendance?.absent ?? 0)}</p>
                 </div>
               </div>
 
               <div
                 className={`px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-bold shadow-sm ${isOverallOnTrack
-                    ? "bg-[var(--success)] text-[var(--text-on-primary)]"
-                    : "bg-[var(--danger)] text-[var(--text-on-primary)]"
+                  ? "bg-[var(--success)] text-[var(--text-on-primary)]"
+                  : "bg-[var(--danger)] text-[var(--text-on-primary)]"
                   }`}
               >
                 <CheckCircle size={18} className="text-[var(--text-on-primary)]" />
-                {t('profile.summary.on_track')}
+                {isOverallOnTrack ? t('profile.summary.on_track') : t('profile.summary.off_track')}
               </div>
             </div>
 
@@ -354,12 +355,12 @@ export default function StudentProfile() {
               ) : (
                 // Empty state
                 <div className="text-center py-12 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] border-dashed">
-                  <p className="text-[var(--text-body)]">No subjects enrolled yet.</p>
+                  <p className="text-[var(--text-body)]">{t('profile.no_subjects')}</p>
                   <button
                     onClick={() => setOpen(true)}
                     className="text-[var(--primary)] text-sm font-bold mt-2 hover:underline cursor-pointer"
                   >
-                    Enroll in a subject
+                    {t('profile.enroll_subject')}
                   </button>
                 </div>
               )}
