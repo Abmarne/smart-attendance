@@ -15,6 +15,7 @@ from app.services.ml_client import ml_client
 from app.utils.geo import calculate_distance
 from app.schemas.attendance import QRAttendanceRequest
 from app.core.security import get_current_user
+from app.utils.jwt_token import decode_jwt
 from fastapi import Depends
 
 logger = logging.getLogger(__name__)
@@ -163,21 +164,21 @@ async def mark_attendance(request: Request, payload: Dict):
 
         trusted_device_id = user.get("trusted_device_id")
 
-        # Case A: First time (no trusted device set)
+        # Case A: First time (no trusted device set) - Auto-bind and allow
         if not trusted_device_id:
-            logger.warning(
-                "First-time device detected for user %s: %s. OTP verification required before binding.",
+            logger.info(
+                "First-time device detected for user %s: %s. Auto-binding device.",
                 user_id,
                 device_id,
             )
-            raise HTTPException(
-                status_code=403,
-                detail="First-time device detected. Please verify this device with the OTP sent to your email before attendance can be marked.",
+            await db.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$set": {"trusted_device_id": device_id}},
             )
         # Case B: Device matches
         elif trusted_device_id == device_id:
             logger.debug("Device match for user %s", user_id)
-        # Case C: Device mismatch
+        # Case C: Device mismatch - Require OTP verification
         else:
             logger.warning(
                 "Device mismatch for user %s. Trusted: %s, Current: %s",
