@@ -165,12 +165,14 @@ async def mark_attendance(request: Request, payload: Dict):
 
         # Case A: First time (no trusted device set)
         if not trusted_device_id:
-            # Update trusted device ID on first attendance
-            await db.users.update_one(
-                {"_id": ObjectId(user_id)}, {"$set": {"trusted_device_id": device_id}}
+            logger.warning(
+                "First-time device detected for user %s: %s. OTP verification required before binding.",
+                user_id,
+                device_id,
             )
-            logger.info(
-                "Trusted device set for user %s: %s", user_id, device_id
+            raise HTTPException(
+                status_code=403,
+                detail="First-time device detected. Please verify this device with the OTP sent to your email before attendance can be marked.",
             )
         # Case B: Device matches
         elif trusted_device_id == device_id:
