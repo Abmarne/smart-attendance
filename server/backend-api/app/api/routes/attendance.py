@@ -35,7 +35,7 @@ async def mark_attendance_qr(
     subject_id = payload.token  # Assuming token is subject_id for MVP
     
     if not ObjectId.is_valid(subject_id):
-         raise HTTPException(status_code=400, detail="Invalid subject ID")
+        raise HTTPException(status_code=400, detail="Invalid subject ID")
          
     subject_oid = ObjectId(subject_id)
 
