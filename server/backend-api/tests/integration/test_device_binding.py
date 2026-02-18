@@ -13,6 +13,8 @@ from unittest.mock import patch, AsyncMock
 from datetime import datetime, UTC
 from bson import ObjectId
 
+from app.core.security import hash_password
+
 
 @pytest.mark.asyncio
 async def test_teacher_exempt_from_device_binding(client: AsyncClient, db):
@@ -165,8 +167,9 @@ async def test_student_device_binding_enforcement(client: AsyncClient, db):
     }
     response = await client.post("/auth/login", json=login_payload)
     assert response.status_code == 200
-    token = response.json()["token"]
-    user_id = response.json()["user_id"]
+    login_data = response.json()
+    token = login_data["token"]
+    user_id = login_data["user_id"]
     
     # 4. Create a test subject with the student enrolled
     student_doc = {
@@ -316,7 +319,6 @@ async def test_device_binding_otp_flow(client: AsyncClient, db):
     
     # For testing, we'll use a known OTP (in production, this would be from email)
     # We need to manually set a known OTP for testing
-    from app.core.security import hash_password
     test_otp = "123456"
     await db.users.update_one(
         {"email": register_payload["email"]},
