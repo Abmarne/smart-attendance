@@ -100,10 +100,9 @@ async def mark_attendance_qr(
         ],
     )
     
-    # 4. Save Audit Record (Crucial: Save is_proxy_suspected)
-    # The prompt says "Save the record to MongoDB with the new field is_proxy_suspected: bool."
-    # Since we can't easily add this to the nested array in subjects without schema changes or unbounded growth,
-    # I'll create a separate log entry.
+    # 4. Save audit record including is_proxy_suspected
+    # Use a dedicated attendance_logs collection to store audit events, avoiding unbounded
+    # growth and schema changes on the nested students array in subjects.
     
     log_entry = {
         "student_id": student_oid,
