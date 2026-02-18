@@ -5,13 +5,14 @@ from typing import Dict, List, Set, Tuple
 
 from bson import ObjectId
 from bson import errors as bson_errors
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from geopy.distance import geodesic
 from app.core.config import ML_CONFIDENT_THRESHOLD, ML_UNCERTAIN_THRESHOLD
 from app.db.mongo import db
 from app.services.attendance_daily import save_daily_summary
 from app.services.ml_client import ml_client
+from app.utils.jwt_token import decode_jwt
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/attendance", tags=["Attendance"])
@@ -69,16 +70,75 @@ def _parse_object_id_list(
 
 
 @router.post("/mark")
-async def mark_attendance(payload: Dict):
+async def mark_attendance(request: Request, payload: Dict):
     """
     Mark attendance by detecting faces in classroom image
 
     payload:
     {
       "image": "data:image/jpeg;base64,...",
-      "subject_id": "..."
+      "subject_id": "...",
+      "device_id": "unique-device-uuid"
+    }
+
+    headers:
+    {
+      "X-Device-ID": "unique-device-uuid"
     }
     """
+    # Extract device ID from header
+    device_id = request.headers.get("X-Device-ID")
+    if not device_id:
+        raise HTTPException(
+            status_code=400, detail="X-Device-ID header is required"
+        )
+
+    # Extract user from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization required")
+
+    try:
+        token = auth_header.split(" ")[1]
+        decoded = decode_jwt(token)
+        user_id = decoded.get("user_id")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Check device binding
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        trusted_device_id = user.get("trusted_device_id")
+
+        # Case A: First time (no trusted device set)
+        if not trusted_device_id:
+            # Update trusted device ID on first attendance
+            await db.users.update_one(
+                {"_id": ObjectId(user_id)}, {"$set": {"trusted_device_id": device_id}}
+            )
+            logger.info(
+                "Trusted device set for user %s: %s", user_id, device_id
+            )
+        # Case B: Device matches
+        elif trusted_device_id == device_id:
+            logger.debug("Device match for user %s", user_id)
+        # Case C: Device mismatch
+        else:
+            logger.warning(
+                "Device mismatch for user %s. Trusted: %s, Current: %s",
+                user_id,
+                trusted_device_id,
+                device_id,
+            )
+            raise HTTPException(
+                status_code=403,
+                detail="New device detected. Please verify with OTP sent to your email.",
+            )
+    except ObjectId as e:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
 
     image_b64 = payload.get("image")
     subject_id = payload.get("subject_id")
