@@ -753,11 +753,20 @@ async def verify_device_binding_otp(
             )
         raise HTTPException(status_code=400, detail=GENERIC_OTP_ERROR)
 
-    if (
-        not stored_otp_hash
-        or not verify_password(payload.otp, stored_otp_hash)
-        or stored_device_id != payload.new_device_id
-    ):
+    reason = None
+    if not stored_otp_hash:
+        reason = "missing_otp_hash"
+    elif not verify_password(payload.otp, stored_otp_hash):
+        reason = "invalid_otp"
+    elif stored_device_id != payload.new_device_id:
+        reason = "device_id_mismatch"
+
+    if reason is not None:
+        logger.warning(
+            "Device binding OTP verification failed for user %s: %s",
+            payload.email,
+            reason,
+        )
         await db.users.update_one(
             {"_id": user["_id"]},
             {"$inc": {"device_binding_otp_failed_attempts": 1}},
