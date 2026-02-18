@@ -182,7 +182,7 @@ export default function StudentList() {
               <select value={selectedSubject || ""}
                 onChange={(e) => setSelectedSubject(e.target.value)}
                 disabled={subjectsLoading}
-                className="w-full h-9 text-sm font-medium text-[color:var(--text-body)] px-3 bg-[color:var(--bg-secondary)] rounded-lg cursor-pointer outline-none focus:ring-2 focus:ring-[color:var(--primary)]"
+                className="w-full h-9 text-sm font-medium text-[color:var(--text-body)] px-3 bg-[color:var(--bg-secondary)] rounded-lg cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 outline-none focus:ring-2 focus:ring-[color:var(--primary)]"
                 title={t("students.select_subject")}
               >
                 {subjectsLoading ? (<option value="">{t("common.loading", "Loading...")}</option>
