@@ -5,7 +5,7 @@ from typing import Dict, List, Set, Tuple
 
 from bson import ObjectId
 from bson import errors as bson_errors
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from geopy.distance import geodesic
 from app.core.config import ML_CONFIDENT_THRESHOLD, ML_UNCERTAIN_THRESHOLD
@@ -121,7 +121,7 @@ async def mark_attendance_qr(
 
 
 @router.post("/mark")
-async def mark_attendance(payload: Dict):
+async def mark_attendance(request: Request, payload: Dict):
     """
     Mark attendance by detecting faces in classroom image
 
@@ -130,7 +130,67 @@ async def mark_attendance(payload: Dict):
       "image": "data:image/jpeg;base64,...",
       "subject_id": "..."
     }
+
+    headers:
+    {
+      "X-Device-ID": "unique-device-uuid"
+    }
     """
+    # Extract device ID from header
+    device_id = request.headers.get("X-Device-ID")
+    if not device_id:
+        raise HTTPException(
+            status_code=400, detail="X-Device-ID header is required"
+        )
+
+    # Extract user from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization required")
+
+    try:
+        token = auth_header.split(" ")[1]
+        decoded = decode_jwt(token)
+        user_id = decoded.get("user_id")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Check device binding
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        trusted_device_id = user.get("trusted_device_id")
+
+        # Case A: First time (no trusted device set)
+        if not trusted_device_id:
+            logger.warning(
+                "First-time device detected for user %s: %s. OTP verification required before binding.",
+                user_id,
+                device_id,
+            )
+            raise HTTPException(
+                status_code=403,
+                detail="First-time device detected. Please verify this device with the OTP sent to your email before attendance can be marked.",
+            )
+        # Case B: Device matches
+        elif trusted_device_id == device_id:
+            logger.debug("Device match for user %s", user_id)
+        # Case C: Device mismatch
+        else:
+            logger.warning(
+                "Device mismatch for user %s. Trusted: %s, Current: %s",
+                user_id,
+                trusted_device_id,
+                device_id,
+            )
+            raise HTTPException(
+                status_code=403,
+                detail="New device detected. Please verify with OTP sent to your email.",
+            )
+    except bson_errors.InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
 
     image_b64 = payload.get("image")
     subject_id = payload.get("subject_id")
