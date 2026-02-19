@@ -591,7 +591,7 @@ export default function Settings() {
               </div>
             )}
 
-            {/* ================= THRESHOLDS TAB ================= */}}
+            {/* ================= THRESHOLDS TAB ================= */}
             {activeTab === "thresholds" && (
               <div className="space-y-8">
                 <div>
