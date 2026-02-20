@@ -108,11 +108,10 @@ const filteredStudents = enhancedStudents;
       const token = localStorage.getItem("token");
 
       const params = new URLSearchParams({
-        subject_id: selectedSubject,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: new Date(startDate.getTime() + REPORT_DATE_RANGE_DAYS * 86400000)
-          .toISOString().split('T')[0],
-      });
+  subject_id: selectedSubject,
+  ...(startDate && { start_date: startDate.toISOString().split('T')[0] }),
+  ...(endDate && { end_date: endDate.toISOString().split('T')[0] }),
+});
 
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/api/reports/export/${format}?${params}`,
