@@ -1,16 +1,13 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import RotatingQR from "./RotatingQR";
 import { 
   X, 
   Minimize2, 
-  FlipHorizontal,
-  Users, 
-  AlertTriangle, 
-  CheckCircle, 
   Info,
   ShieldCheck,
-  StopCircle
+  StopCircle,
+  Users
 } from "lucide-react";
 import PropTypes from 'prop-types';
 import toast from 'react-hot-toast';
@@ -25,23 +22,45 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const Δλ = (lon2-lon1) * Math.PI/180;
 
   const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-          Math.cos(φ1) * Math.cos(φ1) *
+          Math.cos(φ1) * Math.cos(φ2) *
           Math.sin(Δλ/2) * Math.sin(Δλ/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
   return R * c; // in metres
 };
 
-export default function LiveAttendanceModal({ sessionId, subjectId, onClose }) {
+export default function LiveAttendanceModal({ sessionId, subjectId, onClose, subjectName = "Attendance Session" }) {
   const [socket, setSocket] = useState(null);
   const [scannedStudents, setScannedStudents] = useState([]);
   const [teacherLocation, setTeacherLocation] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
   const [activeTab, setActiveTab] = useState("Present");
+  const isMounted = React.useRef(true);
 
   // Timer state for QR refresh
   const [timeLeft, setTimeLeft] = useState(5);
   const [qrToken, setQrToken] = useState("");
+
+  // Get teacher's location on mount
+  useEffect(() => {
+    isMounted.current = true;
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (isMounted.current) {
+            setTeacherLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            });
+          }
+        },
+        (error) => {
+            console.error("Error getting location:", error);
+            // toast.error("Could not get your location for proxy detection.");
+        }
+      );
+    }
+    return () => { isMounted.current = false; };
+  }, []);
 
   // Generate QR Token
   useEffect(() => {
@@ -80,7 +99,6 @@ export default function LiveAttendanceModal({ sessionId, subjectId, onClose }) {
 
     newSocket.on("connect", () => {
       console.log("Socket connected:", newSocket.id);
-      setIsConnected(true);
       newSocket.emit("join_session", { sessionId });
     });
 
@@ -119,11 +137,20 @@ export default function LiveAttendanceModal({ sessionId, subjectId, onClose }) {
     const toastId = toast.loading("Saving attendance data...");
     
     setTimeout(() => {
-        toast.success("Session saved successfully!", { id: toastId });
-        // Generate summary data to pass back if needed, or just close
-        onClose();
+        if (isMounted.current) {
+            toast.success("Session saved successfully!", { id: toastId });
+            // Generate summary data to pass back if needed, or just close
+            onClose();
+        }
     }, 1000);
   };
+  
+  const handleMinimize = () => {
+    // TODO: Implement true minimize (keep socket alive in background)
+    // For now, we will just toast and close, but in full app this should dock.
+    toast("Minimizing session...", { icon: 'ℹ️' });
+    onClose(); 
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm p-4 animate-in fade-in duration-200 font-sans">
@@ -135,9 +162,9 @@ export default function LiveAttendanceModal({ sessionId, subjectId, onClose }) {
             <h2 className="text-xl font-bold text-[var(--text-main)] tracking-tight">
               Live Attendance Session
             </h2>
-            <p className="text-sm font-medium text-[var(--text-body)]">Grade 10A Mathematics b7 Room 203</p>
+            <p className="text-sm font-medium text-[var(--text-body)]">{subjectName} • {new Date().toLocaleDateString()}</p>
             <div className="flex items-center gap-3 mt-3">
-                <span className="text-xs font-medium text-[var(--text-body)]">Session ID: {sessionId}</span>
+                <span className="text-xs font-medium text-[var(--text-body)]">Session ID: {sessionId.slice(0, 8)}...</span>
                 <div className="px-3 py-1 rounded-full text-xs font-bold bg-[var(--primary)]/10 text-[var(--primary)] flex items-center gap-1.5 ">
                     <ShieldCheck size={14} fill="currentColor" className="text-[var(--primary)]/20" strokeWidth={2} />
                     Secure QR mode
@@ -162,7 +189,7 @@ export default function LiveAttendanceModal({ sessionId, subjectId, onClose }) {
                 <h3 className="font-semibold text-[var(--text-body)] text-sm">Teacher command center</h3>
                 <div className="px-2.5 py-1 bg-[var(--success)]/10 text-[var(--success)] text-[10px] font-bold rounded-full flex items-center gap-1.5 shadow-sm border border-[var(--success)]/20">
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse"></span>
-                    Live b7 {scannedStudents.length} checked in
+                    Live • {scannedStudents.length} checked in
                 </div>
             </div>
 
@@ -209,7 +236,7 @@ export default function LiveAttendanceModal({ sessionId, subjectId, onClose }) {
                     </div>
                     <p className="leading-tight text-[var(--text-body)] font-medium">Ask students to scan from the Student app</p>
                 </div>
-                <span className="opacity-40 font-bold text-[10px]">Auto-rotate every 30s</span>
+                <span className="opacity-40 font-bold text-[10px]">Auto-rotate every 5s</span>
             </div>
             
             {/* Decorative background blur */}
@@ -229,7 +256,7 @@ export default function LiveAttendanceModal({ sessionId, subjectId, onClose }) {
                             onClick={() => setActiveTab('Present')}
                             className={`px-3 py-1 text-xs font-semibold rounded-full transition border ${activeTab === 'Present' ? 'bg-[var(--primary)]/10 text-[var(--primary)] border-[var(--primary)]/20' : 'text-[var(--text-body)] border-[var(--border-color)] hover:text-[var(--text-main)]'}`}
                         >
-                            Present b7 {scannedStudents.length}
+                            Present • {scannedStudents.length}
                         </button>
                         <button 
                             onClick={() => setActiveTab('All')}
@@ -247,68 +274,74 @@ export default function LiveAttendanceModal({ sessionId, subjectId, onClose }) {
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2 custom-scrollbar">
-                {scannedStudents.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-[var(--text-body)] gap-3">
-                        <div className="w-12 h-12 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center">
-                            <Users size={20} className="opacity-30" />
-                        </div>
-                        <p className="text-xs font-medium opacity-50">Waiting for scans...</p>
-                    </div>
+                {activeTab === 'All' ? (
+                     <div className="h-full flex flex-col items-center justify-center text-[var(--text-body)] gap-3 opacity-60">
+                        <Users size={32} strokeWidth={1.5} />
+                        <p className="text-sm font-medium">Full student list not available in live view</p>
+                     </div>
                 ) : (
-                    scannedStudents.map((scan, index) => {
-                        let isProxy = false;
-                        let distance = null;
-                        
-                        if (teacherLocation && scan.location) {
-                            distance = calculateDistance(
-                                teacherLocation.latitude, 
-                                teacherLocation.longitude,
-                                scan.location.latitude,
-                                scan.location.longitude
-                            );
-                            if (distance > 50) isProxy = true; 
-                        }
-
-                        return (
-                            <div 
-                                key={index} 
-                                className={`flex items-center justify-between p-3 rounded-lg transition-all duration-300 animate-in slide-in-from-top-2 border ${
-                                    isProxy ? 'bg-[var(--danger)]/10 border-[var(--danger)]/10' : 'bg-[var(--success)]/10 border-[var(--success)]/10'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="relative">
-                                        <div className="w-9 h-9 rounded-full bg-[var(--bg-secondary)] overflow-hidden border border-[var(--bg-card)] shadow-sm">
-                                            {/* Avatar: Ideally fetch from DB/URL */}
-                                             <img 
-                                                src={`https://api.dicebear.com/7.x/notionists/svg?seed=${scan.student.name}`} 
-                                                alt="avatar"
-                                                className="w-full h-full object-cover"
-                                             />
+                    scannedStudents.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-[var(--text-body)] gap-3">
+                            <div className="w-12 h-12 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center">
+                                <Users size={20} className="opacity-30" />
+                            </div>
+                            <p className="text-xs font-medium opacity-50">Waiting for scans...</p>
+                        </div>
+                    ) : (
+                        scannedStudents.map((scan) => {
+                            let isProxy = false;
+                            
+                            if (teacherLocation && scan.location) {
+                                const distance = calculateDistance(
+                                    teacherLocation.latitude, 
+                                    teacherLocation.longitude,
+                                    scan.location.latitude,
+                                    scan.location.longitude
+                                );
+                                if (distance > 50) isProxy = true; 
+                            }
+    
+                            return (
+                                <div 
+                                    key={scan.student.roll || scan.student.id || Math.random()} 
+                                    className={`flex items-center justify-between p-3 rounded-lg transition-all duration-300 animate-in slide-in-from-top-2 border ${
+                                        isProxy ? 'bg-[var(--danger)]/10 border-[var(--danger)]/10' : 'bg-[var(--success)]/10 border-[var(--success)]/10'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative">
+                                            <div className="w-9 h-9 rounded-full bg-[var(--bg-secondary)] overflow-hidden border border-[var(--bg-card)] shadow-sm">
+                                                {/* Avatar: Ideally fetch from DB/URL */}
+                                                 <img 
+                                                    src={`https://api.dicebear.com/7.x/notionists/svg?seed=${scan.student.name}`} 
+                                                    alt="avatar"
+                                                    className="w-full h-full object-cover"
+                                                 />
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <h4 className="font-bold text-[var(--text-main)] text-sm leading-tight">{scan.student.name}</h4>
+                                            <p className="text-[10px] text-[var(--text-body)] font-medium flex items-center gap-1">
+                                                Roll {scan.student.roll} • <span className="text-[var(--text-body)]/40">•</span> <span className="text-[var(--text-body)]/60">Scanned just now</span>
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <h4 className="font-bold text-[var(--text-main)] text-sm leading-tight">{scan.student.name}</h4>
-                                        <p className="text-[10px] text-[var(--text-body)] font-medium flex items-center gap-1">
-                                            Roll {scan.student.roll} b7 <span className="text-[var(--text-body)]/40">•</span> <span className="text-[var(--text-body)]/60">Scanned just now</span>
-                                        </p>
+                                    
+                                    <div className="">
+                                        {isProxy ? (
+                                            <span className="px-3 py-1 bg-[var(--primary)]/10 text-[var(--primary)] rounded-lg text-xs font-bold">
+                                                Pending
+                                            </span>
+                                        ) : (
+                                            <span className="px-3 py-1 bg-[var(--success)]/20 text-[var(--success)] rounded-lg text-xs font-bold">
+                                                Present
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
-                                
-                                <div className="">
-                                    {isProxy ? (
-                                        <span className="px-3 py-1 bg-[var(--primary)]/10 text-[var(--primary)] rounded-lg text-xs font-bold">
-                                            Pending
-                                        </span>
-                                    ) : (
-                                        <span className="px-3 py-1 bg-[var(--success)]/20 text-[var(--success)] rounded-lg text-xs font-bold">
-                                            Present
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })
+                            );
+                        })
+                    )
                 )}
             </div>
           </div>
@@ -322,7 +355,7 @@ export default function LiveAttendanceModal({ sessionId, subjectId, onClose }) {
             </div>
             <div className="flex gap-3">
                 <button 
-                    onClick={onClose}
+                    onClick={handleMinimize}
                     className="px-4 py-2 rounded-lg bg-[var(--bg-secondary)] text-[var(--text-body)] font-bold hover:opacity-80 transition flex items-center gap-2 text-sm"
                 >
                     <Minimize2 size={16} /> Minimize
