@@ -76,16 +76,7 @@ const { t: _t } = useTranslation();
     };
   });
 
-  const filteredStudents = enhancedStudents.filter((s) => {
-    if (!startDate || !endDate) return true;
-
-    const studentDate = new Date(s.createdAt || Date.now());
-
-    return (
-      studentDate >= new Date(startDate) &&
-      studentDate <= new Date(endDate)
-    );
-  });
+const filteredStudents = enhancedStudents;
 
   const handleSort = (key) => {
     let direction = 'asc';
