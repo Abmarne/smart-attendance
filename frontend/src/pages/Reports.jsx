@@ -430,7 +430,7 @@ const goToPage = (page) => {
     
             {/* Left text */}
             <span>
-            Showing {showingFrom}-{showingTo} of {totalStudents} students
+            {t('reports.pagination.showing', { showingFrom, showingTo, totalStudents })}
             {sortConfig.key && (
               <> • {t('reports.footer.sorted_by', {
                 key: t(`reports.footer.sort_keys.${sortConfig.key}`),
