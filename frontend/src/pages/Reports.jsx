@@ -466,7 +466,7 @@ const goToPage = (page) => {
       </button>
 
       <span className="text-xs text-[var(--text-body)]">
-        Page {currentPage} of {totalPages}
+        {t('reports.pagination.page_info', { current: currentPage, total: totalPages })}
       </span>
 
       <button
