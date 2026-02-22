@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Download,
   FileText,
-  Calendar,
   ChevronDown,
   RotateCcw,
   Search,
@@ -22,7 +21,7 @@ import { toast } from "react-hot-toast";
 const REPORT_DATE_RANGE_DAYS = 30;
 
 export default function Reports() {
-const { t: _t } = useTranslation();
+  const { t: _t } = useTranslation();
 
   const [threshold] = useState(75);
   const [subjects, setSubjects] = useState([]);
@@ -76,7 +75,7 @@ const { t: _t } = useTranslation();
     };
   });
 
-const filteredStudents = enhancedStudents;
+  const filteredStudents = enhancedStudents;
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -108,36 +107,36 @@ const filteredStudents = enhancedStudents;
       const token = localStorage.getItem("token");
 
       const params = new URLSearchParams({
-  subject_id: selectedSubject,
-  ...(startDate && { start_date: startDate.toISOString().split('T')[0] }),
-  ...(endDate && { end_date: endDate.toISOString().split('T')[0] }),
-});
+        subject_id: selectedSubject,
+        ...(startDate && { start_date: startDate.toISOString().split('T')[0] }),
+        ...(endDate && { end_date: endDate.toISOString().split('T')[0] }),
+      });
 
-     const res = await fetch(
-  `${import.meta.env.VITE_API_URL}/api/reports/export/${format}?${params}`,
-  {
-    headers: { Authorization: `Bearer ${token}` }
-  }
-);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/reports/export/${format}?${params}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
 
-// ✅ check response
-if (!res.ok) {
-  throw new Error("Download failed");
-}
+      // ✅ check response
+      if (!res.ok) {
+        throw new Error("Download failed");
+      }
 
-const blob = await res.blob();
-const url = window.URL.createObjectURL(blob);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
 
-// ✅ proper anchor handling
-const a = document.createElement("a");
-a.href = url;
-a.download = `report.${format}`;
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
+      // ✅ proper anchor handling
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
-// ✅ cleanup memory
-window.URL.revokeObjectURL(url);
+      // ✅ cleanup memory
+      window.URL.revokeObjectURL(url);
 
       toast.success(`${format.toUpperCase()} downloaded`);
     } catch (err) {
@@ -190,6 +189,6 @@ window.URL.revokeObjectURL(url);
           ))}
         </tbody>
       </table>
-    </div>
+    </div >
   );
 }
