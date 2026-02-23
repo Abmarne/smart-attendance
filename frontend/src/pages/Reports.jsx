@@ -20,8 +20,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-hot-toast";
 //import { fetchStudentById } from "../api/teacher";
 
-const REPORT_DATE_RANGE_DAYS = 30;
-
 export default function Reports() {
   const { t: _t } = useTranslation();
 
