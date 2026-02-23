@@ -47,7 +47,7 @@ export default function Reports() {
    console.log("Students API response:", data);
     setStudents(data);
   });
-  }, [selectedSubject, startDate, endDate]);
+ }, [selectedSubject, startDate, endDate]);
 
   const verifiedStudents = students.filter((s) => s.verified === true);
   
