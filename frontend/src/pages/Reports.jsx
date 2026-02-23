@@ -30,6 +30,7 @@ export default function Reports() {
 
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [threshold, setThreshold] = useState(75);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
   const [loadingFormat, setLoadingFormat] = useState(null);
 
