@@ -139,7 +139,6 @@ export default function StudentNavigation({ activePage = "home" }) {
               }}/>
    </div>
       </div>
-
      
     </>
   );
