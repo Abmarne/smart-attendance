@@ -84,9 +84,9 @@ export default function StudentProfile() {
 
   // Calculate data outside of conditional rendering
   const img = data?.image_url;
-  const subjectsData =  [];
-  const totalPresent = 50 // subjectsData.reduce((acc, sub) => acc + (sub.attended || 0), 0);
-  const totalClasses = 5//subjectsData.reduce((acc, sub) => acc + (sub.total || 0), 0);
+  const subjectsData = mySubjects ||  [];
+  const totalPresent =  subjectsData.reduce((acc, sub) => acc + (sub.attended || 0), 0);
+  const totalClasses = subjectsData.reduce((acc, sub) => acc + (sub.total || 0), 0);
   const overallPercentage = totalClasses > 0 ? (totalPresent / totalClasses) * 100 : 0;
   const isOverallOnTrack = overallPercentage >= 75;
 
