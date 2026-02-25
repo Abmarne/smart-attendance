@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from bson import ObjectId
+from datetime import datetime, timezone
 
 from ...db.mongo import db
 from ...core.security import get_current_user
@@ -10,7 +11,6 @@ import base64
 from app.services.ml_client import ml_client
 
 from app.services import schedule_service
-from datetime import datetime
 import pytz
 import os
 # from typing import List
@@ -60,19 +60,21 @@ async def api_get_my_today_schedule(current_user: dict = Depends(get_current_use
     # Process entries for frontend
     schedule_list = []
     for entry in entries:
-        schedule_list.append({
-            "id": str(entry.get("_id", "")),
-            "subject_name": entry.get("subject_name", "Unknown Subject"),
-            "start_time": entry.get("start_time", ""),
-            "end_time": entry.get("end_time", ""),
-            "room": entry.get("room", ""),
-            "status": "scheduled" # Will be calculated on frontend or here
-        })
-    
+        schedule_list.append(
+            {
+                "id": str(entry.get("_id") or ""),
+                "subject_name": str(entry.get("subject_name") or "Unknown Subject"),
+                "start_time": str(entry.get("start_time") or ""),
+                "end_time": str(entry.get("end_time") or ""),
+                "room": str(entry.get("room") or ""),
+                "status": "scheduled",
+            }
+        )
+
     return {
         "day": current_day,
         "date": now_in_school_tz.strftime("%Y-%m-%d"),
-        "classes": schedule_list
+        "classes": schedule_list,
     }
 
 
@@ -218,7 +220,7 @@ async def get_my_subjects(current_user: dict = Depends(get_current_user)):
         total = attendance_data.get("total", 0)
         present = attendance_data.get("present", 0)
         percentage = attendance_data.get("percentage", 0)
-        
+
         if total > 0 and percentage == 0:
             # Recalculate if total is set but percentage is 0
             percentage = round((present / total) * 100, 2)
@@ -228,9 +230,9 @@ async def get_my_subjects(current_user: dict = Depends(get_current_user)):
         results.append(
             {
                 "id": str(sub["_id"]),
-                "name": sub["name"],
-                "code": sub.get("code"),
-                "type": sub.get("type", "Core"),
+                "name": str(sub.get("name") or "Unknown"),
+                "code": str(sub.get("code") or ""),
+                "type": str(sub.get("type") or "Core"),
                 "attendance": percentage,
                 "attended": present,
                 "total": total,
@@ -254,11 +256,11 @@ async def get_available_subjects(current_user: dict = Depends(get_current_user))
     return [
         {
             "_id": str(sub["_id"]),
-            "name": sub["name"],
-            "code": sub.get("code"),
-            "type": sub.get("type"),
-            "professor_ids": [str(pid) for pid in sub.get("professor_ids", [])],
-            "created_at": sub["created_at"],
+            "name": str(sub.get("name") or "Unknown Name"),
+            "code": str(sub.get("code") or ""),
+            "type": str(sub.get("type") or "Core"),
+            "professor_ids": [str(pid) for pid in (sub.get("professor_ids") or [])],
+            "created_at": sub.get("created_at"),
         }
         for sub in subjects
     ]
@@ -315,6 +317,34 @@ async def add_subject(subject_id: str, current_user: dict = Depends(get_current_
             }
         },
     )
+
+    # 5️⃣ CREATE NOTIFICATION FOR TEACHERS
+    # Get all professor IDs for this subject
+    professor_ids = subject.get("professor_ids", [])
+    subject_name = subject.get("name", "Unknown")
+
+    # Create a notification for each teacher
+    if professor_ids:
+        notification_message = (
+            f"Student {student_name} has registered for {subject_name}."
+        )
+
+        for teacher_id in professor_ids:
+            await db.notifications.insert_one(
+                {
+                    "user_id": teacher_id,
+                    "message": notification_message,
+                    "notification_type": "enrollment",
+                    "is_read": False,
+                    "created_at": datetime.now(timezone.utc),
+                    "metadata": {
+                        "student_id": str(student_oid),
+                        "student_name": student_name,
+                        "subject_id": str(subject_oid),
+                        "subject_name": subject_name,
+                    },
+                }
+            )
 
     return {"message": "Subject added successfully"}
 

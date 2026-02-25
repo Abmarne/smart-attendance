@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+import socketio
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 
@@ -22,7 +23,9 @@ from .core.config import APP_NAME, ORIGINS
 from app.services.attendance_daily import (
     ensure_indexes as ensure_attendance_daily_indexes,
 )
+from app.services.schedule_service import ensure_indexes as ensure_schedule_indexes
 from app.services.ml_client import ml_client
+from app.services.attendance_socket_service import sio
 from app.db.nonce_store import close_redis
 from app.core.scheduler import start_scheduler, shutdown_scheduler
 
@@ -63,6 +66,9 @@ async def lifespan(app: FastAPI):
         await ensure_attendance_daily_indexes()
         logger.info("attendance_daily indexes ensured")
 
+        await ensure_schedule_indexes()
+        logger.info("schedule indexes ensured")
+
         start_scheduler()
     except Exception as e:
         logger.warning(
@@ -87,8 +93,8 @@ def create_app() -> FastAPI:
     # CORS MUST be added FIRST so headers are present even on errors
     app.add_middleware(
         CORSMiddleware,
+        allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:\d+",
         allow_origins=ORIGINS,
-        allow_origin_regex=r"https://.*\.vercel\.app",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -105,8 +111,8 @@ def create_app() -> FastAPI:
         secret_key=os.getenv("SESSION_SECRET_KEY", "temporary-dev-secret-key"),
         session_cookie="session",
         max_age=14 * 24 * 3600,
-        same_site="lax",
-        https_only=False,
+        same_site="none",
+        https_only=True,
     )
 
     # Exception Handlers
@@ -120,7 +126,7 @@ def create_app() -> FastAPI:
     app.include_router(students_router)
     app.include_router(attendance_router)
     app.include_router(schedule_router)
-    app.include_router(holidays_router)                              # ← NEW
+    app.include_router(holidays_router)  # ← NEW
     app.include_router(settings_router.router)
     app.include_router(notifications_router)
     app.include_router(analytics_router)
@@ -134,6 +140,9 @@ app = create_app()
 
 # Instrumentator
 Instrumentator().instrument(app).expose(app)
+
+# Wrap FastAPI app with Socket.IO as the outermost ASGI layer
+app = socketio.ASGIApp(sio, app)
 
 
 if __name__ == "__main__":

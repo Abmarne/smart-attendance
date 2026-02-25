@@ -95,6 +95,7 @@ export default function Settings() {
   // State for Face Settings
   const [liveness, setLiveness] = useState(true);
   const [sensitivity, setSensitivity] = useState(80);
+  const sensitivityTimeoutRef = useRef(null);
 
   // State for email preff
   const [_emailPreferences, setEmailPreferences] = useState(false);
@@ -152,13 +153,13 @@ export default function Settings() {
       const res = await sendLowAttendanceNotice();
       setNoticeResult({
         success: true,
-        message: res.message || "Notices sent successfully",
+        message: res.message || t('settings.notices.sent_successfully'),
       });
     } catch (err) {
       const errorMsg =
         err?.response?.data?.detail ||
         err.message ||
-        "Failed to send notices";
+        t('settings.notices.failed');
       setNoticeResult({ success: false, message: errorMsg });
     } finally {
       setSendingNotice(false);
@@ -186,7 +187,7 @@ export default function Settings() {
       await apiLogout();
     } catch (error) {
       // Log error for debugging but continue with logout
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.error("Logout API call failed:", error);
       }
     } finally {
@@ -194,7 +195,7 @@ export default function Settings() {
       localStorage.removeItem("user");
       localStorage.removeItem("refresh_token");
       setShowLogoutConfirm(false);
-      toast.success("Logged out successfully");
+      toast.success(t('settings.logout_success'));
       navigate("/login");
     }
   }
@@ -360,6 +361,22 @@ export default function Settings() {
     }
   }
 
+  // Debounced sensitivity handler
+  const handleSensitivityChange = (value) => {
+    setSensitivity(value);
+    
+    // Clear previous timeout
+    if (sensitivityTimeoutRef.current) {
+      clearTimeout(sensitivityTimeoutRef.current);
+    }
+    
+    // Set new timeout to update after user stops dragging
+    sensitivityTimeoutRef.current = setTimeout(() => {
+      // Auto-save could be triggered here if needed
+      // For now, it will be saved when user clicks "Apply Changes"
+    }, 500);
+  };
+
   // UI: show a simple loading state until data is loaded
   if (!loaded) {
     return <div className="p-6">Loading settings…</div>;
@@ -381,21 +398,21 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
-      <div className="max-w-7xl mx-auto p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
         {/* Page Header */}
         <div>
-          <h2 className="text-2xl font-bold text-[var(--text-main)]">
+          <h2 className="text-xl sm:text-2xl font-bold text-[var(--text-main)]">
             {t('settings.title', { name: profile?.name || "User" })}
           </h2>
-          <p className="text-[var(--text-body)] opacity-90 mt-1">
+          <p className="text-sm sm:text-base text-[var(--text-body)] opacity-90 mt-1">
             {t('settings.subtitle')}
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 items-start">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
           <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} />
 
-          <div className="flex-1 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-sm p-8 w-full min-h-[600px]">
+          <div className="flex-1 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-sm p-4 sm:p-6 md:p-8 w-full min-h-[500px] sm:min-h-[600px]">
             {/* ================= GENERAL TAB ================= */}
             {activeTab === "general" && (
               <div className="space-y-8">
@@ -413,12 +430,12 @@ export default function Settings() {
                   <label className="text-sm font-semibold text-[var(--text-main)]">
                     {t('settings.general.theme')}
                   </label>
-                  <div className="flex gap-4">
+                  <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-4">
                     {["Light", "Dark", "Forest", "Cyber"].map((mode) => (
                       <button
                         key={mode}
                         onClick={() => setTheme(mode)}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl border font-medium transition-all ${theme === mode
+                        className={`flex items-center justify-center sm:justify-start gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl border font-medium transition-all text-sm sm:text-base ${theme === mode
                           ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
                           : "border-[var(--border-color)] hover:bg-[var(--bg-secondary)] text-[var(--text-body)]"
                           }`}
@@ -428,7 +445,7 @@ export default function Settings() {
                         {mode === "Dark" && <Moon size={18} />}
                         {mode === "Forest" && <TreePine size={18} />}
                         {mode === "Cyber" && <Monitor size={18} />}
-                        {mode}
+                        <span className="hidden xs:inline">{mode}</span>
                       </button>
                     ))}
                   </div>
@@ -545,7 +562,7 @@ export default function Settings() {
                       disabled={sendingNotice}
                       className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[var(--danger,#ef4444)] text-white hover:opacity-90 shadow-md disabled:opacity-50"
                     >
-                      {sendingNotice ? "Sending…" : "Send Low Attendance Notice"}
+                      {sendingNotice ? t('settings.notices.sending') : t('settings.notices.send_low_attendance')}
                     </button>
                     {noticeResult && (
                       <span className={`text-sm ${noticeResult.success ? "text-green-600" : "text-[var(--danger,#ef4444)]"}`}>
@@ -559,14 +576,14 @@ export default function Settings() {
                 </div>
 
                 {/* Footer Buttons */}
-                <div className="pt-6 flex justify-end gap-3 border-t border-[var(--border-color)]">
-                  <button className="px-6 py-2.5 rounded-xl text-sm font-medium text-[var(--text-body)] hover:bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+                <div className="pt-6 flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-[var(--border-color)]">
+                  <button className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-medium text-[var(--text-body)] hover:bg-[var(--bg-secondary)] border border-[var(--border-color)]">
                     {t('settings.general.cancel')}
                   </button>
                   <button
                     onClick={saveProfile}
                     disabled={saving}
-                    className="px-8 py-2.5 rounded-xl text-sm font-semibold bg-[var(--primary)] text-[var(--text-on-primary)] hover:bg-[var(--primary-hover)] shadow-md disabled:opacity-50"
+                    className="w-full sm:w-auto px-8 py-2.5 rounded-xl text-sm font-semibold bg-[var(--primary)] text-[var(--text-on-primary)] hover:bg-[var(--primary-hover)] shadow-md disabled:opacity-50"
                   >
                     {saving ? t('settings.general.saving') : t('settings.general.save')}
                   </button>
@@ -586,7 +603,7 @@ export default function Settings() {
                   </p>
                 </div>
 
-                <div className="p-8 border border-[var(--border-color)] rounded-xl bg-[var(--bg-card)] space-y-8 shadow-sm">
+                <div className="p-4 sm:p-8 border border-[var(--border-color)] rounded-xl bg-[var(--bg-card)] space-y-6 sm:space-y-8 shadow-sm">
                   <div className="flex justify-between items-end border-b border-[var(--border-color)] pb-4">
                     <label className="text-base font-semibold text-[var(--text-main)]">
                       {t('settings.thresholds.ranges')}
@@ -707,8 +724,8 @@ export default function Settings() {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-6 p-6 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-color)]">
-                  <div className="w-20 h-20 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center text-2xl font-bold text-[var(--text-body)] opacity-90 border-4 border-[var(--border-color)] shadow-sm overflow-hidden">
+                <div className="flex items-center gap-4 sm:gap-6 p-4 sm:p-6 bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-color)] flex-col sm:flex-row text-center sm:text-left">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold text-[var(--text-body)] opacity-90 border-4 border-[var(--border-color)] shadow-sm overflow-hidden flex-shrink-0">
                     {profile.avatarUrl ? (
                       <img
                         src={profile.avatarUrl}
@@ -719,15 +736,15 @@ export default function Settings() {
                       <span>{getInitials(profile.name)}</span>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h4 className="text-lg font-bold text-[var(--text-main)]">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-lg font-bold text-[var(--text-main)] truncate">
                       {profile.name || "-"}
                     </h4>
-                    <p className="text-sm text-[var(--text-body)] opacity-90">
+                    <p className="text-sm text-[var(--text-body)] opacity-90 truncate">
                       {profile.branch?.toUpperCase() || "Department of Science"}
                     </p>{" "}
                   </div>
-                  <label className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg text-sm font-medium text-[var(--text-body)] hover:bg-[var(--bg-secondary)] transition shadow-sm cursor-pointer">
+                  <label className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg text-sm font-medium text-[var(--text-body)] hover:bg-[var(--bg-secondary)] transition shadow-sm cursor-pointer w-full sm:w-auto justify-center">
                     <Upload size={16} />
                     <span>{t('settings.profile.change_photo')}</span>
                     <input
@@ -884,27 +901,7 @@ export default function Settings() {
                   </p>
                 </div>
 
-                {/* 1. Enrolment Status */}
-                <div className="p-6 border border-[var(--border-color)] rounded-xl bg-[var(--bg-secondary)] flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-[var(--success)]/10 text-[var(--success)] rounded-full flex items-center justify-center">
-                      <Camera size={28} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[var(--text-main)]">
-                        {t('settings.face_settings.face_data')}
-                      </h4>
-                      <p className="text-sm text-[var(--text-body)] opacity-70">
-                        {t('settings.face_settings.last_updated')}
-                      </p>
-                    </div>
-                  </div>
-                  <button className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-body)] rounded-lg text-sm font-medium hover:bg-[var(--bg-secondary)] shadow-sm flex items-center gap-2 cursor-pointer">
-                    <RefreshCw size={16} /> {t('settings.face_settings.recalibrate')}
-                  </button>
-                </div>
-
-                {/* 2. Recognition Sensitivity Slider */}
+                {/* Recognition Sensitivity Slider */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <label className="text-sm font-semibold text-[var(--text-main)]">
@@ -919,7 +916,7 @@ export default function Settings() {
                     min="50"
                     max="99"
                     value={sensitivity}
-                    onChange={(e) => setSensitivity(e.target.value)}
+                    onChange={(e) => handleSensitivityChange(e.target.value)}
                     className="w-full h-2 bg-[var(--bg-secondary)] rounded-lg appearance-none cursor-pointer accent-[var(--primary)]"
                   />
                   <p className="text-xs text-[var(--text-body)] opacity-90">
@@ -954,26 +951,6 @@ export default function Settings() {
                       <div
                         className={`w-4 h-4 bg-[var(--bg-card)] rounded-full absolute top-1 transition-transform ${liveness ? "left-7" : "left-1"}`}
                       ></div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 4. Danger Zone */}
-                <div className="pt-6 border-t border-[var(--border-color)]">
-                  <h4 className="text-sm font-bold text-[var(--danger)] mb-4">
-                    {t('settings.face_settings.danger_zone')}
-                  </h4>
-                  <div className="flex items-center justify-between p-4 bg-[var(--danger)]/10 border border-[var(--danger)]/20 rounded-xl">
-                    <div>
-                      <h5 className="text-sm font-semibold text-[var(--danger)]">
-                        {t('settings.face_settings.reset_model')}
-                      </h5>
-                      <p className="text-xs text-[var(--danger)] mt-1">
-                        {t('settings.face_settings.reset_desc')}
-                      </p>
-                    </div>
-                    <button className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--danger)]/20 text-[var(--danger)] rounded-lg text-sm font-medium hover:bg-[var(--danger)]/20 transition shadow-sm flex items-center gap-2 cursor-pointer">
-                      <Trash2 size={16} /> {t('settings.face_settings.reset_data')}
                     </button>
                   </div>
                 </div>
@@ -1078,6 +1055,13 @@ export default function Settings() {
         onClose={() => setShowLogoutConfirm(false)}
         onConfirm={confirmLogout}
       />
+
+      {showSubjectModal && (
+        <AddSubjectModal
+          onClose={() => setShowSubjectModal(false)}
+          onSave={handleAddSubject}
+        />
+      )}
     </div>
   );
 }

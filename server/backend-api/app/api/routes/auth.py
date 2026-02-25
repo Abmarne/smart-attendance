@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Request
 from fastapi.responses import RedirectResponse
 from authlib.integrations.starlette_client import OAuth
-from datetime import datetime, timedelta, UTC, timezone
+from datetime import datetime, timedelta, timezone
 import secrets
 import os
 import jwt
@@ -62,7 +62,7 @@ async def register(
 
     # Generate random verification link
     verification_token = secrets.token_urlsafe(32)
-    verification_expiry = datetime.now(UTC) + timedelta(hours=24)
+    verification_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
 
     if len(payload.password.encode("utf-8")) > 72:
         raise HTTPException(
@@ -79,7 +79,7 @@ async def register(
         "is_verified": os.getenv("ENVIRONMENT") == "development",
         "verification_token": verification_token,
         "verification_expiry": verification_expiry,
-        "created_at": datetime.now(UTC),
+        "created_at": datetime.now(timezone.utc),
         "trusted_device_id": None,
     }
     # Insert into users collection
@@ -100,7 +100,7 @@ async def register(
                 "branch": payload.branch,
                 "roll": payload.roll,
                 "year": payload.year,
-                "created_at": datetime.now(UTC),
+                "created_at": datetime.now(timezone.utc),
             }
             await db.students.insert_one(student_doc)
 
@@ -136,8 +136,8 @@ async def register(
                         "liveness": True,
                     },
                 },
-                "createdAt": datetime.now(UTC),
-                "updatedAt": datetime.now(UTC),
+                "createdAt": datetime.now(timezone.utc),
+                "updatedAt": datetime.now(timezone.utc),
             }
 
             await db.teachers.insert_one(teacher_doc)
@@ -196,31 +196,39 @@ async def login(request: Request, payload: LoginRequest):
     if not user.get("is_verified", False):
         raise HTTPException(status_code=403, detail="Please verify your email first..")
 
-    # 4. Check device binding cooldown after logout
-    device_id = request.headers.get("X-Device-ID")
-    last_logout_time = user.get("last_logout_time")
-    trusted_device_id = user.get("trusted_device_id")
-    
-    if device_id and last_logout_time and trusted_device_id:
-        # Normalize logout time to UTC
-        if last_logout_time.tzinfo is None:
-            last_logout_time = last_logout_time.replace(tzinfo=timezone.utc)
-        
-        # Check if less than 5 hours have passed since logout
-        time_since_logout = datetime.now(UTC) - last_logout_time
-        cooldown_period = timedelta(hours=5)
-        
-        # If logging in from a different device within cooldown period
-        if time_since_logout < cooldown_period and device_id != trusted_device_id:
-            hours_remaining = (cooldown_period - time_since_logout).total_seconds() / 3600
-            logger.warning(
-                "Login attempt from new device within cooldown period for user: %s",
-                payload.email
-            )
-            raise HTTPException(
-                status_code=403,
-                detail=f"DEVICE_COOLDOWN: You recently logged out. Please wait {hours_remaining:.1f} hours before logging in from a new device, or verify with OTP.",
-            )
+    # 4. Check device binding cooldown after logout - ONLY for students
+    # Teachers and admins are exempt from device binding
+    if user["role"] == "student":
+        device_id = request.headers.get("X-Device-ID")
+        last_logout_time = user.get("last_logout_time")
+        trusted_device_id = user.get("trusted_device_id")
+
+        if device_id and last_logout_time and trusted_device_id:
+            # Normalize logout time to UTC
+            if last_logout_time.tzinfo is None:
+                last_logout_time = last_logout_time.replace(tzinfo=timezone.utc)
+
+            # Check if less than 5 hours have passed since logout
+            time_since_logout = datetime.now(timezone.utc) - last_logout_time
+            cooldown_period = timedelta(hours=5)
+
+            # If logging in from a different device within cooldown period
+            if time_since_logout < cooldown_period and device_id != trusted_device_id:
+                hours_remaining = (
+                    cooldown_period - time_since_logout
+                ).total_seconds() / 3600
+                logger.warning(
+                    "Login attempt from new device within cooldown period for user: %s",
+                    payload.email,
+                )
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        f"DEVICE_COOLDOWN: You recently logged out. Please wait "
+                        f"{hours_remaining:.1f} hours before logging in from a "
+                        "new device, or verify with OTP."
+                    ),
+                )
 
     # 5. Generate session ID and tokens
     session_id = generate_session_id()
@@ -235,14 +243,20 @@ async def login(request: Request, payload: LoginRequest):
     )
 
     # 6. Store hashed session ID in database (invalidates previous sessions)
+    update_data = {
+        "current_active_session": hash_session_id(session_id),
+        "session_created_at": datetime.now(timezone.utc),
+    }
+
+    # If this is the first login (no trusted device yet) and a device ID is provided,
+    # bind it automatically
+    device_id = request.headers.get("X-Device-ID")
+    if user["role"] == "student" and not user.get("trusted_device_id") and device_id:
+        update_data["trusted_device_id"] = device_id
+
     await db.users.update_one(
         {"_id": user["_id"]},
-        {
-            "$set": {
-                "current_active_session": hash_session_id(session_id),
-                "session_created_at": datetime.now(UTC),
-            }
-        },
+        {"$set": update_data},
     )
 
     logger.info(f"New session created for user: {payload.email}")
@@ -341,7 +355,7 @@ def _get_otp_expiry() -> datetime:
     Returns:
         A timezone-aware UTC datetime 10 minutes from now.
     """
-    return datetime.now(UTC) + timedelta(minutes=10)
+    return datetime.now(timezone.utc) + timedelta(minutes=10)
 
 
 def _normalize_expiry(dt: datetime | None) -> datetime | None:
@@ -439,7 +453,7 @@ async def verify_otp(payload: VerifyOtpRequest) -> dict:
         await db.users.update_one({"_id": user["_id"]}, _clear_otp_fields())
         raise HTTPException(status_code=400, detail=GENERIC_OTP_ERROR)
 
-    if expiry is None or expiry < datetime.now(UTC):
+    if expiry is None or expiry < datetime.now(timezone.utc):
         await db.users.update_one(
             {"_id": user["_id"]},
             {"$inc": {"otp_failed_attempts": 1}},
@@ -483,7 +497,7 @@ async def reset_password(payload: ResetPasswordRequest) -> dict:
         await db.users.update_one({"_id": user["_id"]}, _clear_otp_fields())
         raise HTTPException(status_code=400, detail=GENERIC_OTP_ERROR)
 
-    if expiry is None or expiry < datetime.now(UTC):
+    if expiry is None or expiry < datetime.now(timezone.utc):
         await db.users.update_one(
             {"_id": user["_id"]},
             {"$inc": {"otp_failed_attempts": 1}},
@@ -529,7 +543,7 @@ async def verify_email(token: str = Query(...)):
     if expires_at:
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
-        if expires_at and expires_at < datetime.now(UTC):
+        if expires_at and expires_at < datetime.now(timezone.utc):
             raise HTTPException(status_code=400, detail="Verification link expired")
 
     # await db.users.update_one(
@@ -639,7 +653,7 @@ async def google_callback(request: Request):
             {
                 "$set": {
                     "current_active_session": hash_session_id(session_id),
-                    "session_created_at": datetime.now(UTC),
+                    "session_created_at": datetime.now(timezone.utc),
                 }
             },
         )
@@ -727,7 +741,9 @@ async def send_device_binding_otp(
     return SendDeviceBindingOtpResponse()
 
 
-@router.post("/verify-device-binding-otp", response_model=VerifyDeviceBindingOtpResponse)
+@router.post(
+    "/verify-device-binding-otp", response_model=VerifyDeviceBindingOtpResponse
+)
 async def verify_device_binding_otp(
     payload: VerifyDeviceBindingOtpRequest,
 ) -> dict:
@@ -750,7 +766,7 @@ async def verify_device_binding_otp(
         await db.users.update_one(
             {"_id": user["_id"]},
             {
-                "$unset": {
+                "$unset": {  # nosec B105 - MongoDB unset operator, not a password
                     "device_binding_otp_hash": 1,
                     "device_binding_otp_expiry": 1,
                     "device_binding_new_device_id": 1,
@@ -760,7 +776,7 @@ async def verify_device_binding_otp(
         )
         raise HTTPException(status_code=400, detail=GENERIC_OTP_ERROR)
 
-    if expiry is None or expiry < datetime.now(UTC):
+    if expiry is None or expiry < datetime.now(timezone.utc):
         await db.users.update_one(
             {"_id": user["_id"]},
             {"$inc": {"device_binding_otp_failed_attempts": 1}},
@@ -770,7 +786,7 @@ async def verify_device_binding_otp(
             await db.users.update_one(
                 {"_id": user["_id"]},
                 {
-                    "$unset": {
+                    "$unset": {  # nosec B105 - MongoDB unset operator, not a password
                         "device_binding_otp_hash": 1,
                         "device_binding_otp_expiry": 1,
                         "device_binding_new_device_id": 1,
@@ -803,7 +819,7 @@ async def verify_device_binding_otp(
             await db.users.update_one(
                 {"_id": user["_id"]},
                 {
-                    "$unset": {
+                    "$unset": {  # nosec B105 - MongoDB unset operator, not a password
                         "device_binding_otp_hash": 1,
                         "device_binding_otp_expiry": 1,
                         "device_binding_new_device_id": 1,
@@ -820,7 +836,7 @@ async def verify_device_binding_otp(
             "$set": {
                 "trusted_device_id": payload.new_device_id,
             },
-            "$unset": {
+            "$unset": {  # nosec B105 - MongoDB unset operator, not a password
                 "device_binding_otp_hash": 1,
                 "device_binding_otp_expiry": 1,
                 "device_binding_new_device_id": 1,
@@ -844,7 +860,7 @@ async def verify_device_binding_otp(
 async def logout(request: Request):
     """
     Logout endpoint that tracks logout time for device binding cooldown.
-    
+
     When a user logs out, we save the timestamp. If they try to login from
     a new/untrusted device within 5 hours, they'll need OTP verification.
     """
@@ -857,7 +873,9 @@ async def logout(request: Request):
         decoded = decode_jwt(token)
         user_id = decoded.get("user_id")
     except (jwt.DecodeError, jwt.ExpiredSignatureError) as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {type(e).__name__}")
+        raise HTTPException(
+            status_code=401, detail=f"Invalid token: {type(e).__name__}"
+        )
     except Exception as e:
         logger.error("Unexpected error during token decode: %s", e)
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -867,9 +885,9 @@ async def logout(request: Request):
         {"_id": ObjectId(user_id)},
         {
             "$set": {
-                "last_logout_time": datetime.now(UTC),
+                "last_logout_time": datetime.now(timezone.utc),
             },
-            "$unset": {
+            "$unset": {  # nosec B105 - MongoDB unset operator, not a password
                 "current_active_session": 1,
             },
         },
@@ -877,4 +895,3 @@ async def logout(request: Request):
 
     logger.info("User logged out: %s", user_id)
     return {"message": "Logged out successfully"}
-
