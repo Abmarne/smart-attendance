@@ -373,7 +373,10 @@ async def export_attendance_pdf(
 
             # Get student info
             name = html.escape(user.get("name", "Unknown"))
-            roll_no = html.escape(str(student_profile.get("roll_number", "N/A")))
+            roll_raw = student_profile.get("roll") or student_profile.get(
+                "roll_number", "N/A"
+            )
+            roll_no = html.escape(str(roll_raw))
 
             table_data.append(
                 [
@@ -545,7 +548,9 @@ async def export_attendance_csv(
 
             # Get student info
             name = user.get("name", "Unknown")
-            roll_no = student_profile.get("roll_number", "N/A")
+            roll_no = student_profile.get("roll") or student_profile.get(
+                "roll_number", "N/A"
+            )
 
             writer.writerow(
                 [
@@ -846,7 +851,10 @@ async def export_combined_attendance_pdf(
 
                 # Get student info
                 name = html.escape(user.get("name", "Unknown"))
-                roll_no = html.escape(str(student_profile.get("roll_number", "N/A")))
+                roll_raw = student_profile.get("roll") or student_profile.get(
+                    "roll_number", "N/A"
+                )
+                roll_no = html.escape(str(roll_raw))
 
                 table_data.append(
                     [
