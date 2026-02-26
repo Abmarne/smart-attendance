@@ -11,8 +11,17 @@ import {
   Loader2,
   AlertTriangle
 } from "lucide-react"; 
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer
+} from "recharts";
 import { getTodaySchedule } from "../api/schedule";
-import { fetchDashboardStats } from "../api/analytics";
+import { fetchDashboardStats, fetchAttendanceTrend } from "../api/analytics";
 import StartAttendanceModal from "../components/attendance/StartAttendanceModal";
 import { exportCombinedReport } from "../api/teacher";
 import { toast } from "react-hot-toast";
@@ -31,6 +40,9 @@ export default function Dashboard() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [tick, setTick] = useState(0); // Periodic tick for real-time status updates
+
+  const [trendData, setTrendData] = useState([]);
+  const [loadingTrend, setLoadingTrend] = useState(true);
 
   // Fetch dashboard stats
   useEffect(() => {
@@ -96,6 +108,49 @@ export default function Dashboard() {
       }
     };
     fetchSchedule();
+  }, []);
+
+  // Fetch Attendance Trend Data (This Week)
+  useEffect(() => {
+    const loadTrendData = async () => {
+      try {
+        const today = new Date();
+        const firstDay = new Date(today);
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+        firstDay.setDate(diff); // Monday
+        
+        const lastDay = new Date(firstDay);
+        lastDay.setDate(firstDay.getDate() + 6); // Sunday
+
+        const trend = await fetchAttendanceTrend({
+          dateFrom: firstDay.toISOString().split('T')[0],
+          dateTo: lastDay.toISOString().split('T')[0]
+        });
+
+        // Map backend data to recharts specific format if needed
+        const formattedData = (trend.data || []).map(item => {
+          // Parse date parts to avoid timezone issues. "2023-01-01" -> local date
+          const [y, m, d] = item.date.split('-').map(Number);
+          const date = new Date(y, m - 1, d);
+          return {
+            name: date.toLocaleDateString("en-US", { weekday: "short" }),
+            fullDate: item.date,
+            present: item.present,
+            absent: item.absent,
+            late: item.late,
+            total: item.total
+          };
+        });
+        
+        setTrendData(formattedData);
+      } catch (error) {
+        console.error("Failed to load attendance trend:", error);
+      } finally {
+        setLoadingTrend(false);
+      }
+    };
+    loadTrendData();
   }, []);
 
   // Periodic tick for real-time status updates (every 60 seconds)
@@ -413,9 +468,87 @@ export default function Dashboard() {
                 <span className="text-xs text-[var(--text-body)] bg-[var(--bg-secondary)] px-2 py-1 rounded">{t('dashboard.trends.this_week')}</span>
               </div>
 
-              {/* Chart Placeholder Box */}
-              <div className="h-40 bg-[var(--bg-secondary)] rounded-xl w-full flex items-center justify-center text-[var(--text-body)]/50 mb-4 border border-dashed border-[var(--border-color)]">
-                {t('dashboard.trends.chart_area')}
+              {/* Chart Area */}
+              <div className="h-40 w-full mb-4">
+                {loadingTrend ? (
+                  <div className="h-full w-full bg-[var(--bg-secondary)]/30 rounded-xl flex items-center justify-center">
+                    <Loader2 size={24} className="animate-spin text-[var(--text-body)]/50" />
+                  </div>
+                ) : trendData.length === 0 ? (
+                  <div className="h-full w-full bg-[var(--bg-secondary)]/30 rounded-xl flex items-center justify-center text-sm text-[var(--text-body)]">
+                    {t('dashboard.trends.no_data', 'No data this week')}
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorPresentD" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorAbsentD" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--text-body)" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="var(--text-body)" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorLateD" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--warning)" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="var(--warning)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fill: 'var(--text-body)', fontSize: 10}} 
+                        dy={5}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fill: 'var(--text-body)', fontSize: 10}} 
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          borderRadius: '8px', 
+                          border: '1px solid var(--border-color)', 
+                          backgroundColor: "var(--bg-card)", 
+                          color: "var(--text-main)",
+                          fontSize: '12px',
+                          padding: '8px'
+                        }}
+                        formatter={(value, name) => [value, name.charAt(0).toUpperCase() + name.slice(1)]}
+                        labelStyle={{color: 'var(--text-body)', marginBottom: '4px'}}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="present" 
+                        stroke="var(--primary)" 
+                        strokeWidth={2} 
+                        fillOpacity={1} 
+                        fill="url(#colorPresentD)" 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="absent" 
+                        stroke="var(--text-body)" 
+                        strokeOpacity={0.5}
+                        strokeWidth={2} 
+                        fillOpacity={1} 
+                        fill="url(#colorAbsentD)" 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="late" 
+                        stroke="var(--warning)" 
+                        strokeWidth={2} 
+                        fillOpacity={1} 
+                        fill="url(#colorLateD)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
               </div>
 
               <div className="flex justify-center gap-4 text-xs">

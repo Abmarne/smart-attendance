@@ -275,7 +275,8 @@
       "chart_area": "Chart Area",
       "present": "Present",
       "absent": "Absent",
-      "late": "Late"
+      "late": "Late",
+      "no_data": "No data this week"
     },
     "classes": {
       "completed": "Completed",
