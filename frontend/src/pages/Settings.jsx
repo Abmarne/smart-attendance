@@ -456,14 +456,14 @@ export default function Settings() {
         // often unlocks the audio subsystem and satisfies user checks or specific browser policies.
         // Some users refer to "Audio Permission" generally.
         try {
-            await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             // We don't actually need the stream, so stop it immediately to release the mic
+            stream.getTracks().forEach((track) => track.stop());
             // This is just to trigger the browser's "Allow Audio?" prompt
         } catch (err) {
             console.error("Audio permission denied:", err);
             if (err.name === 'NotAllowedError' || err.name === 'NotFoundError') {
                  toast.error("Audio permission required for sound effects");
-                 setNotifications(prev => ({ ...prev, sound: false }));
                  return;
             }
         }
