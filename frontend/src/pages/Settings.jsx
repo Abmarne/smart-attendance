@@ -34,6 +34,7 @@ import { logout as apiLogout } from "../api/auth";
 import AddSubjectModal from "../components/AddSubjectModal";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
+import { requestNotificationPermission, getNotificationPermissionState, showSystemNotification } from "../utils/notificationService";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -256,14 +257,16 @@ export default function Settings() {
           sound: dbSound,
         });
 
-        // Sync with browser permission state - if denied or default (not granted), clamp push to false
+        // Sync with browser permission state (System-level override)
         if ("Notification" in window) {
-          if (Notification.permission !== "granted") {
-            setNotifications((prev) => ({
-              ...prev,
-              push: false,
-            }));
-          }
+           if (Notification.permission !== 'granted') {
+             // If browser denied/default, force toggles off to reflect reality
+             setNotifications(prev => ({ 
+               ...prev, 
+               push: false,
+               sound: false // Sound is often tied to notifications, so disable if not permitted
+             }));
+           }
         }
 
         setEmailPreferences(data?.settings?.emailPreferences ?? []);
@@ -392,97 +395,61 @@ export default function Settings() {
     }, 500);
   };
 
+  // Handles
   const handlePushToggle = async () => {
-    // If permission is already denied, we can't do anything via JS to re-prompt
-    // But we should sync state if user tries to enable
-    if (Notification.permission === "denied" && !notifications.push) {
-       toast.error(t('settings.notifications.permission_denied_browser') || "Notifications are blocked by your browser. Please enable them in site settings.");
-       return;
-    }
-
-    // Toggle logic
     const nextState = !notifications.push;
-
+    
     if (nextState) {
-      // User wants to turn ON
-      if (!("Notification" in window)) {
-        toast.error(t('settings.notifications.not_supported') || "This browser does not support desktop notifications");
-        return;
-      }
-
-      if (Notification.permission === "granted") {
-        setNotifications((prev) => ({ ...prev, push: true }));
-      } else if (Notification.permission !== "denied") {
-        // Request permission
-        const permission = await Notification.requestPermission();
-        if (permission === "granted") {
-          setNotifications((prev) => ({ ...prev, push: true }));
-          toast.success(t('settings.notifications.enabled') || "Notifications enabled");
-        } else {
-          // Denied or dismissed
-          setNotifications((prev) => ({ ...prev, push: false }));
-          toast.error(t('settings.notifications.permission_denied') || "Notification permission denied");
-        }
+      // User wants to turn ON notification permission
+      const granted = await requestNotificationPermission();
+      
+      if (granted) {
+        setNotifications(prev => ({ ...prev, push: true }));
+        toast.success(t('settings.notifications.enabled') || "Notifications enabled");
+        // Also ensure sound is enabled by default if permission granted? Maybe user choice.
+      } else {
+        // Permission denied or dismissed
+        setNotifications(prev => ({ ...prev, push: false }));
+        toast.error(t('settings.notifications.permission_denied') || "Notification permission denied");
       }
     } else {
-      // User wants to turn OFF
-      setNotifications((prev) => ({ ...prev, push: false }));
+      // User turning OFF
+      setNotifications(prev => ({ ...prev, push: false }));
     }
   };
 
   const handleSoundToggle = async () => {
     const nextState = !notifications.sound;
-
+    
     if (nextState) {
-        // 1. Check notification permission (often linked to sound)
-        if ("Notification" in window) {
-           if (Notification.permission === "denied") {
-              toast.error(t('settings.notifications.permission_denied_browser') || "Notifications are blocked by your browser.");
-              return;
-           }
-           
-           if (Notification.permission === "default") {
-              const permission = await Notification.requestPermission();
-              if (permission !== "granted") {
-                  setNotifications(prev => ({ ...prev, sound: false }));
-                  return;
-              }
-           }
-        }
-
-        // 2. Play a short silent sound to unlock audio context
+      // Sound requires notification permission too, often
+      const granted = await requestNotificationPermission();
+      
+      if (granted) {
+        // Also request audio unlock if possible (from previous request logic, for consistency)
         try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) {
-                 toast.error("Audio not supported");
-                 return;
-            }
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.frequency.value = 440; 
-            gain.gain.value = 0.01; // Very quiet
-            
-            osc.start();
-            osc.onended = () => {
-                ctx.close();
-            };
-            setTimeout(() => {
-                osc.stop();
-            }, 100);
-            
-            setNotifications((prev) => ({ ...prev, sound: true }));
-        } catch (e) {
-            console.error("Audio init failed", e);
-            toast.error("Could not initialize audio");
-            setNotifications((prev) => ({ ...prev, sound: false }));
-        }
+             // Just trigger audio context briefly or getUserMedia to permit audio playback
+             // This ensures "Sound effects" work reliably
+             const AudioContext = window.AudioContext || window.webkitAudioContext;
+             if (AudioContext) {
+                 const ctx = new AudioContext();
+                 const osc = ctx.createOscillator();
+                 const gain = ctx.createGain();
+                 osc.connect(gain);
+                 gain.connect(ctx.destination);
+                 gain.gain.value = 0.001; // Silent
+                 osc.start();
+                 setTimeout(() => { osc.stop(); ctx.close(); }, 100);
+             }
+        } catch(e) { console.error("Audio unlock failed", e); }
+
+        setNotifications(prev => ({ ...prev, sound: true }));
+      } else {
+        setNotifications(prev => ({ ...prev, sound: false }));
+        toast.error(t('settings.notifications.permission_denied') || "Notification permission required for sound");
+      }
     } else {
-      setNotifications((prev) => ({ ...prev, sound: false }));
+       setNotifications(prev => ({ ...prev, sound: false }));
     }
   };
 
