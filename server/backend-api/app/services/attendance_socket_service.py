@@ -1,9 +1,8 @@
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Dict, List, Any
 
 import socketio
-from datetime import UTC
 from bson import ObjectId
 from pymongo import UpdateOne
 
@@ -238,7 +237,6 @@ async def flush_attendance_data():
                 )
 
                 log_students_data = []
-                for scan in unique_scans:
                     log_students_data.append(
                         {
                             "studentId": ObjectId(scan["studentId"]),
