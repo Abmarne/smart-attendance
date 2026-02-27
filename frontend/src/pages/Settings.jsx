@@ -34,6 +34,7 @@ import { logout as apiLogout } from "../api/auth";
 import AddSubjectModal from "../components/AddSubjectModal";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
+import { requestNotificationPermission, getNotificationPermissionState, showSystemNotification } from "../utils/notificationService";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -251,6 +252,18 @@ export default function Settings() {
           sound: data?.settings?.notifications?.sound ?? false,
         });
 
+        // Sync with browser permission state (System-level override)
+        if ("Notification" in window) {
+           if (Notification.permission !== 'granted') {
+             // If browser denied/default, force toggles off to reflect reality
+             setNotifications(prev => ({ 
+               ...prev, 
+               push: false,
+               sound: false // Sound is often tied to notifications, so disable if not permitted
+             }));
+           }
+        }
+
         setEmailPreferences(data?.settings?.emailPreferences ?? []);
 
         setWarningVal(data?.settings?.thresholds?.warningVal ?? 75);
@@ -377,6 +390,64 @@ export default function Settings() {
     }, 500);
   };
 
+  // Handles
+  const handlePushToggle = async () => {
+    const nextState = !notifications.push;
+    
+    if (nextState) {
+      // User wants to turn ON notification permission
+      const granted = await requestNotificationPermission();
+      
+      if (granted) {
+        setNotifications(prev => ({ ...prev, push: true }));
+        toast.success(t('settings.notifications.enabled') || "Notifications enabled");
+        // Also ensure sound is enabled by default if permission granted? Maybe user choice.
+      } else {
+        // Permission denied or dismissed
+        setNotifications(prev => ({ ...prev, push: false }));
+        toast.error(t('settings.notifications.permission_denied') || "Notification permission denied");
+      }
+    } else {
+      // User turning OFF
+      setNotifications(prev => ({ ...prev, push: false }));
+    }
+  };
+
+  const handleSoundToggle = async () => {
+    const nextState = !notifications.sound;
+    
+    if (nextState) {
+      // Sound requires notification permission too, often
+      const granted = await requestNotificationPermission();
+      
+      if (granted) {
+        // Also request audio unlock if possible (from previous request logic, for consistency)
+        try {
+             // Just trigger audio context briefly or getUserMedia to permit audio playback
+             // This ensures "Sound effects" work reliably
+             const AudioContext = window.AudioContext || window.webkitAudioContext;
+             if (AudioContext) {
+                 const ctx = new AudioContext();
+                 const osc = ctx.createOscillator();
+                 const gain = ctx.createGain();
+                 osc.connect(gain);
+                 gain.connect(ctx.destination);
+                 gain.gain.value = 0.001; // Silent
+                 osc.start();
+                 setTimeout(() => { osc.stop(); ctx.close(); }, 100);
+             }
+        } catch(e) { console.error("Audio unlock failed", e); }
+
+        setNotifications(prev => ({ ...prev, sound: true }));
+      } else {
+        setNotifications(prev => ({ ...prev, sound: false }));
+        toast.error(t('settings.notifications.permission_denied') || "Notification permission required for sound");
+      }
+    } else {
+       setNotifications(prev => ({ ...prev, sound: false }));
+    }
+  };
+
   // UI: show a simple loading state until data is loaded
   if (!loaded) {
     return <div className="p-6">Loading settings…</div>;
@@ -475,12 +546,7 @@ export default function Settings() {
                       </div>
                     </div>
                     <button
-                      onClick={() =>
-                        setNotifications({
-                          ...notifications,
-                          push: !notifications.push,
-                        })
-                      }
+                      onClick={handlePushToggle}
                       className={`w-12 h-6 rounded-full transition-colors relative ${notifications.push ? "bg-[var(--primary)]" : "bg-[var(--border-color)]"}`}
                     >
                       <div
@@ -505,12 +571,7 @@ export default function Settings() {
                       </div>
                     </div>
                     <button
-                      onClick={() =>
-                        setNotifications({
-                          ...notifications,
-                          sound: !notifications.sound,
-                        })
-                      }
+                      onClick={handleSoundToggle}
                       className={`w-12 h-6 rounded-full transition-colors relative ${notifications.sound ? "bg-[var(--primary)]" : "bg-[var(--border-color)]"}`}
                     >
                       <div

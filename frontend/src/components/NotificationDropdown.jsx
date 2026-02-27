@@ -6,6 +6,7 @@ import {
   deleteNotification,
   deleteAllNotifications,
 } from "../api/notifications";
+import { showSystemNotification } from "../utils/notificationService";
 
 export default function NotificationDropdown() {
   const { t } = useTranslation();
@@ -14,18 +15,46 @@ export default function NotificationDropdown() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
+  const isFirstLoad = useRef(true);
+  const previousNotificationsRef = useRef([]);
 
   // Fetch notifications
   const fetchNotifications = async () => {
     try {
-      setLoading(true);
+      if (isFirstLoad.current) setLoading(true);
+      
       const data = await getInAppNotifications();
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unread_count || 0);
+      const newItems = data.notifications || [];
+      const newUnread = data.unread_count || 0;
+
+      // Check for new notifications to trigger system alert
+      if (!isFirstLoad.current && newItems.length > 0) {
+           // Compare with ref to avoid stale closure issues
+           const previous = previousNotificationsRef.current;
+           const newlyAdded = newItems.filter(n => !previous.find(existing => existing._id === n._id));
+           
+           if (newlyAdded.length > 0) {
+             newlyAdded.forEach(item => {
+                 showSystemNotification(item.title || "New Notification", {
+                     body: item.message,
+                     tag: item._id,
+                     icon: '/pwa-192x192.png'
+                 });
+             });
+           }
+      }
+
+      // Update refs and state
+      previousNotificationsRef.current = newItems;
+      setNotifications(newItems);
+      setUnreadCount(newUnread);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
     } finally {
-      setLoading(false);
+      if (isFirstLoad.current) {
+          setLoading(false);
+          isFirstLoad.current = false;
+      }
     }
   };
 
