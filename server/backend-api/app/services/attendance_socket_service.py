@@ -237,6 +237,7 @@ async def flush_attendance_data():
                 )
 
                 log_students_data = []
+                for scan in unique_scans:
                     log_students_data.append(
                         {
                             "studentId": ObjectId(scan["studentId"]),
