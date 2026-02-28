@@ -594,7 +594,9 @@ export default function Analytics() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-[var(--text-body)] opacity-60">{t('analytics.lists.no_students_at_risk')}</p>
+                  <p className="text-sm text-[var(--text-body)] opacity-60">
+                    {t(selectedSubject === "all" ? "analytics.lists.no_classes_at_risk" : "analytics.lists.no_students_at_risk")}
+                  </p>
                 )}
               </div>
             </div>
