@@ -78,8 +78,12 @@ export default function Analytics() {
     ? needingSupport.filter(item => item.score < 75).slice(0, 4)
     : needingSupport.slice(0, 4);
 
-  const bestTitle = isSubjectSelected ? t('analytics.lists.best_students') : t('analytics.lists.best');
-  const supportTitle = isSubjectSelected ? t('analytics.lists.needs_support_students') : t('analytics.lists.needs_support');
+  const bestTitle = isSubjectSelected
+    ? t('analytics.lists.best_students', { defaultValue: t('analytics.lists.best') })
+    : t('analytics.lists.best');
+  const supportTitle = isSubjectSelected
+    ? t('analytics.lists.needs_support_students', { defaultValue: t('analytics.lists.needs_support') })
+    : t('analytics.lists.needs_support');
 
   // Handle outside click to close dropdown
   useEffect(() => {
